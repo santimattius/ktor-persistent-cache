@@ -1,4 +1,4 @@
-rootProject.name = "kmp-basic-template"
+rootProject.name = "ktor-persistent-cache"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
