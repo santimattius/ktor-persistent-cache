@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKMPLibrary)
     alias(libs.plugins.mavenPublish)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -30,8 +31,15 @@ kotlin {
     }
 
     sourceSets {
+        androidMain.dependencies {
+            implementation(libs.androidx.startup.runtime)
+        }
         commonMain.dependencies {
             // put your Multiplatform dependencies here
+            implementation(libs.ktor.client.core)
+            implementation(libs.okio)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.serialization.protobuf)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
