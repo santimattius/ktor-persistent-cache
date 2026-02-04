@@ -20,11 +20,12 @@ import kotlin.io.encoding.Base64
  * A [CacheStorage] implementation that stores cached responses on the filesystem using Okio.
  *
  * @property config The configuration for this cache storage.
+ * @property fileSystem The Okio FileSystem to use for storage operations. Defaults to [FileSystem.SYSTEM].
  */
 class OkioFileCacheStorage(
-    private val config: OkioFileCacheConfig
+    private val config: OkioFileCacheConfig,
+    private val fileSystem: FileSystem = FileSystem.SYSTEM
 ) : CacheStorage {
-    private val fileSystem = FileSystem.SYSTEM
     private val cacheDir = config.cacheDirectoryProvider.cacheDirectory / config.fileName
     private val cacheMutex = Mutex()
     private var initialized = false
@@ -60,7 +61,7 @@ class OkioFileCacheStorage(
                 fileSystem.write(cacheFile) {
                     write(cacheEntry.toByteArray())
                 }
-                cleanupCache()
+                cleanupCacheInternal()
             } catch (ex: CancellationException) {
                 throw ex
             } catch (e: Exception) {
@@ -151,21 +152,20 @@ class OkioFileCacheStorage(
      * Removes all cached responses for a URL.
      *
      * @param url The URL of the request
-     * @throws CacheStorageException if clearing fails
+     * @throws CacheStorageException if removal fails
      */
     override suspend fun removeAll(url: Url) {
         cacheMutex.withLock {
             try {
                 val cacheFile = getCacheFile(url)
                 if (fileSystem.exists(cacheFile)) {
-                    fileSystem.deleteRecursively(cacheFile)
-                    fileSystem.createDirectories(cacheFile)
+                    fileSystem.delete(cacheFile)
                 }
             } catch (ex: CancellationException) {
                 throw ex
             } catch (e: Exception) {
                 // Log error or handle it appropriately
-                throw CacheStorageException("Failed to clear cache", e)
+                throw CacheStorageException("Failed to remove cache entries", e)
             }
         }
     }
@@ -181,47 +181,47 @@ class OkioFileCacheStorage(
         return elapsed > config.ttl
     }
 
-    private suspend fun cleanupCache() {
+    /**
+     * Internal cleanup method - MUST be called from within mutex lock.
+     * Removes expired entries and enforces size limits using LRU eviction.
+     */
+    private fun cleanupCacheInternal() {
         if (config.maxSize <= 0) return
 
-        cacheMutex.withLock {
-            try {
-                var totalSize = 0L
-                val files = fileSystem.list(cacheDir)
-                    .filter { it.name.endsWith(".cache") }
-                    .map { file ->
-                        val attributes = fileSystem.metadata(file)
-                        val size = attributes.size ?: return@map null
-                        val lastModifiedAtMillis =
-                            attributes.lastModifiedAtMillis ?: return@map null
-                        CacheFileInfo(file, size, lastModifiedAtMillis)
-                    }.filterNotNull()
-                    .sortedByDescending { it.lastModified }
+        try {
+            var totalSize = 0L
+            val files = fileSystem.list(cacheDir)
+                .filter { it.name.endsWith(".cache") }
+                .map { file ->
+                    val attributes = fileSystem.metadata(file)
+                    val size = attributes.size ?: return@map null
+                    val lastModifiedAtMillis =
+                        attributes.lastModifiedAtMillis ?: return@map null
+                    CacheFileInfo(file, size, lastModifiedAtMillis)
+                }.filterNotNull()
+                .sortedByDescending { it.lastModified }
 
-                // Calculate total size and find files to delete if over limit
-                val filesToKeep = mutableListOf<CacheFileInfo>()
-                for (file in files) {
-                    if (totalSize + file.size <= config.maxSize) {
-                        totalSize += file.size
-                        filesToKeep.add(file)
-                    } else {
-                        fileSystem.delete(file.path)
-                    }
+            // Calculate total size and find files to delete if over limit
+            val filesToKeep = mutableListOf<CacheFileInfo>()
+            for (file in files) {
+                if (totalSize + file.size <= config.maxSize) {
+                    totalSize += file.size
+                    filesToKeep.add(file)
+                } else {
+                    fileSystem.delete(file.path)
                 }
-
-                // Remove expired files from the ones we're keeping
-                val currentTime = getTimeMillis()
-                filesToKeep.forEach { file ->
-                    if (currentTime - file.lastModified > config.ttl) {
-                        fileSystem.delete(file.path)
-                    }
-                }
-            } catch (ex: CancellationException) {
-                throw ex
-            } catch (e: Exception) {
-                // Log error or handle it appropriately
-                println("Failed to cleanup cache: ${e.message}")
             }
+
+            // Remove expired files from the ones we're keeping
+            val currentTime = getTimeMillis()
+            filesToKeep.forEach { file ->
+                if (currentTime - file.lastModified > config.ttl) {
+                    fileSystem.delete(file.path)
+                }
+            }
+        } catch (e: Exception) {
+            // Log error or handle it appropriately
+            println("Failed to cleanup cache: ${e.message}")
         }
     }
 }

@@ -18,6 +18,7 @@ ktorVersion = "3.4.0"
 okio = "3.16.4"
 kotlinxSerializationJson = "1.10.0"
 kotlinxSerializationProtobuf = "1.10.0"
+kotlinxCoroutines = "1.10.1"
 startupRuntime = "1.2.0"
 
 androidx-espresso = "3.7.0"
@@ -62,6 +63,7 @@ androidx-startup-runtime = { module = "androidx.startup:startup-runtime", versio
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 
 #Android Testing
 androidx-testExt-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
