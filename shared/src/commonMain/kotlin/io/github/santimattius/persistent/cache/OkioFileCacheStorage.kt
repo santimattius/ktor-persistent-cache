@@ -15,6 +15,7 @@ import okio.Path
 import okio.SYSTEM
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * A [CacheStorage] implementation that stores cached responses on the filesystem using Okio.
@@ -28,17 +29,11 @@ class OkioFileCacheStorage(
 ) : CacheStorage {
     private val cacheDir = config.cacheDirectoryProvider.cacheDirectory / config.fileName
     private val cacheMutex = Mutex()
-    private var initialized = false
 
     init {
-        ensureCacheDirectoryExists()
-    }
-
-    private fun ensureCacheDirectoryExists() {
-        if (!initialized) {
-            fileSystem.createDirectories(cacheDir)
-            initialized = true
-        }
+        // Create cache directory once during initialization
+        // This is thread-safe as construction happens before the instance is shared
+        fileSystem.createDirectories(cacheDir)
     }
 
     /**
@@ -51,8 +46,7 @@ class OkioFileCacheStorage(
     override suspend fun store(url: Url, data: CachedResponseData) {
         cacheMutex.withLock {
             try {
-                ensureCacheDirectoryExists()
-                val cacheFile = getCacheFile(url)
+                val cacheFile = getCacheFile(url, data.varyKeys)
                 val cacheEntry = CacheEntry(
                     url = url.toString(),
                     response = data.makeCopy(),
@@ -74,8 +68,7 @@ class OkioFileCacheStorage(
     override suspend fun find(url: Url, varyKeys: Map<String, String>): CachedResponseData? {
         return cacheMutex.withLock {
             try {
-                ensureCacheDirectoryExists()
-                val cacheFile = getCacheFile(url)
+                val cacheFile = getCacheFile(url, varyKeys)
                 if (!fileSystem.exists(cacheFile)) return@withLock null
 
                 val cacheEntry = fileSystem.read(cacheFile) {
@@ -101,21 +94,32 @@ class OkioFileCacheStorage(
     override suspend fun findAll(url: Url): Set<CachedResponseData> {
         return cacheMutex.withLock {
             try {
-                ensureCacheDirectoryExists()
-                val cacheFile = getCacheFile(url)
-                if (!fileSystem.exists(cacheFile)) return@withLock emptySet()
+                val urlPrefix = getUrlCacheKeyPrefix(url)
+                val matchingFiles = fileSystem.list(cacheDir)
+                    .filter { it.name.startsWith(urlPrefix) && it.name.endsWith(".cache") }
 
-                val cacheEntry = fileSystem.read(cacheFile) {
-                    CacheEntry.fromByteArray(readByteArray())
+                if (matchingFiles.isEmpty()) return@withLock emptySet()
+
+                val results = mutableSetOf<CachedResponseData>()
+                for (file in matchingFiles) {
+                    try {
+                        val cacheEntry = fileSystem.read(file) {
+                            CacheEntry.fromByteArray(readByteArray())
+                        }
+
+                        // Check if the cache entry is expired
+                        if (isExpired(cacheEntry.timestamp)) {
+                            fileSystem.delete(file)
+                        } else {
+                            results.add(cacheEntry.response.restore())
+                        }
+                    } catch (ex: CancellationException) {
+                        throw ex
+                    } catch (_: Exception) {
+                        // Skip corrupted entries
+                    }
                 }
-
-                // Check if the cache entry is expired
-                if (isExpired(cacheEntry.timestamp)) {
-                    fileSystem.delete(cacheFile)
-                    return@withLock emptySet()
-                }
-
-                setOf(cacheEntry.response.restore())
+                results
             } catch (ex: CancellationException) {
                 throw ex
             } catch (_: Exception) {
@@ -135,7 +139,7 @@ class OkioFileCacheStorage(
     override suspend fun remove(url: Url, varyKeys: Map<String, String>) {
         cacheMutex.withLock {
             try {
-                val cacheFile = getCacheFile(url)
+                val cacheFile = getCacheFile(url, varyKeys)
                 if (fileSystem.exists(cacheFile)) {
                     fileSystem.delete(cacheFile)
                 }
@@ -149,7 +153,7 @@ class OkioFileCacheStorage(
     }
 
     /**
-     * Removes all cached responses for a URL.
+     * Removes all cached responses for a URL (regardless of vary keys).
      *
      * @param url The URL of the request
      * @throws CacheStorageException if removal fails
@@ -157,9 +161,12 @@ class OkioFileCacheStorage(
     override suspend fun removeAll(url: Url) {
         cacheMutex.withLock {
             try {
-                val cacheFile = getCacheFile(url)
-                if (fileSystem.exists(cacheFile)) {
-                    fileSystem.delete(cacheFile)
+                val urlPrefix = getUrlCacheKeyPrefix(url)
+                val matchingFiles = fileSystem.list(cacheDir)
+                    .filter { it.name.startsWith(urlPrefix) && it.name.endsWith(".cache") }
+
+                for (file in matchingFiles) {
+                    fileSystem.delete(file)
                 }
             } catch (ex: CancellationException) {
                 throw ex
@@ -170,9 +177,41 @@ class OkioFileCacheStorage(
         }
     }
 
-    private fun getCacheFile(url: Url): Path {
-        val cacheKey = Base64.encode(url.toString().encodeToByteArray())
-        return cacheDir / "$cacheKey.cache"
+    /**
+     * Generates the cache file path for a URL with optional vary keys.
+     * Uses URL-safe Base64 encoding to avoid filesystem issues with special characters.
+     *
+     * File naming scheme: {urlKey}_{varyKeysHash}.cache
+     * - urlKey: Base64 encoded URL
+     * - varyKeysHash: Hash of sorted vary keys (or "0" if empty)
+     *
+     * This scheme allows prefix matching for findAll/removeAll operations.
+     *
+     * @param url The request URL
+     * @param varyKeys Optional vary keys for content negotiation differentiation
+     * @return The cache file path
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): Path {
+        val urlKey = Base64.UrlSafe.encode(url.toString().encodeToByteArray())
+        val varyKeysHash = if (varyKeys.isEmpty()) {
+            "0"
+        } else {
+            val varyKeysString = varyKeys.entries
+                .sortedBy { it.key }
+                .joinToString(";") { "${it.key}=${it.value}" }
+            varyKeysString.hashCode().toUInt().toString(16)
+        }
+        return cacheDir / "${urlKey}_${varyKeysHash}.cache"
+    }
+
+    /**
+     * Gets the URL-only cache key prefix for matching all entries of a URL.
+     * Used by findAll() and removeAll() to find entries regardless of vary keys.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun getUrlCacheKeyPrefix(url: Url): String {
+        return Base64.UrlSafe.encode(url.toString().encodeToByteArray()) + "_"
     }
 
     private fun isExpired(timestamp: Long): Boolean {

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!--
+        App Startup provider registration for ContextInitializer.
+        This ensures the application context is available for the cache directory provider.
+        See: https://developer.android.com/topic/libraries/app-startup
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="io.github.santimattius.persistent.cache.startup.ContextInitializer"
+                android:value="androidx.startup" />
+        </provider>
+    </application>
+
+</manifest>
