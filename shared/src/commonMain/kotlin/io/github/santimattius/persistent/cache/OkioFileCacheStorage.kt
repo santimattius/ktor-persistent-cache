@@ -246,23 +246,26 @@ internal class OkioFileCacheStorage(
         if (config.maxSize <= 0) return
 
         try {
-            // Collect cache file info including stored timestamp from CacheEntry
+            // Collect cache file info including stored timestamp from CacheEntry and file lastModified
             val cacheFiles = fileSystem.list(cacheDir)
                 .filter { it.name.endsWith(".cache") }
                 .mapNotNull { file ->
                     try {
-                        val size = fileSystem.metadata(file).size ?: return@mapNotNull null
+                        val metadata = fileSystem.metadata(file)
+                        val size = metadata.size ?: return@mapNotNull null
                         val cacheEntry = fileSystem.read(file) {
                             CacheEntry.fromByteArray(readByteArray())
                         }
-                        CacheFileInfo(file, size, cacheEntry.timestamp)
+                        val lastModified = metadata.lastModifiedAtMillis ?: 0L
+                        CacheFileInfo(file, size, cacheEntry.timestamp, lastModified)
                     } catch (_: Exception) {
                         // Delete corrupted files
                         try { fileSystem.delete(file) } catch (_: Exception) { }
                         null
                     }
                 }
-                .sortedByDescending { it.timestamp } // Sort by stored timestamp (newest first)
+                // Newest first: by stored timestamp, then by file lastModified (tie-breaker for coarse clock resolution)
+                .sortedWith(compareByDescending<CacheFileInfo> { it.timestamp }.thenByDescending { it.lastModifiedAtMillis })
 
             var totalSize = 0L
 
@@ -325,12 +328,14 @@ private data class CacheEntry(
 }
 
 /**
- * Metadata for a cache file used during cleanup (path, size, stored timestamp).
+ * Metadata for a cache file used during cleanup (path, size, stored timestamp, file lastModified).
+ * [lastModifiedAtMillis] is used as a tie-breaker when [timestamp] is equal (e.g. coarse clock resolution on some platforms).
  */
 private data class CacheFileInfo(
     val path: Path,
     val size: Long,
-    val timestamp: Long // Stored timestamp from CacheEntry for consistent TTL checking
+    val timestamp: Long, // Stored timestamp from CacheEntry for consistent TTL checking
+    val lastModifiedAtMillis: Long = 0L // File last-modified for LRU tie-breaker
 )
 
 /**
