@@ -23,7 +23,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * @property config The configuration for this cache storage.
  * @property fileSystem The Okio FileSystem to use for storage operations. Defaults to [FileSystem.SYSTEM].
  */
-class OkioFileCacheStorage(
+internal class OkioFileCacheStorage(
     private val config: OkioFileCacheConfig,
     private val fileSystem: FileSystem = FileSystem.SYSTEM
 ) : CacheStorage {
@@ -223,39 +223,46 @@ class OkioFileCacheStorage(
     /**
      * Internal cleanup method - MUST be called from within mutex lock.
      * Removes expired entries and enforces size limits using LRU eviction.
+     *
+     * Uses stored timestamp from CacheEntry for consistent TTL checking
+     * (same as find() and findAll() methods).
      */
     private fun cleanupCacheInternal() {
         if (config.maxSize <= 0) return
 
         try {
-            var totalSize = 0L
-            val files = fileSystem.list(cacheDir)
+            // Collect cache file info including stored timestamp from CacheEntry
+            val cacheFiles = fileSystem.list(cacheDir)
                 .filter { it.name.endsWith(".cache") }
-                .map { file ->
-                    val attributes = fileSystem.metadata(file)
-                    val size = attributes.size ?: return@map null
-                    val lastModifiedAtMillis =
-                        attributes.lastModifiedAtMillis ?: return@map null
-                    CacheFileInfo(file, size, lastModifiedAtMillis)
-                }.filterNotNull()
-                .sortedByDescending { it.lastModified }
-
-            // Calculate total size and find files to delete if over limit
-            val filesToKeep = mutableListOf<CacheFileInfo>()
-            for (file in files) {
-                if (totalSize + file.size <= config.maxSize) {
-                    totalSize += file.size
-                    filesToKeep.add(file)
-                } else {
-                    fileSystem.delete(file.path)
+                .mapNotNull { file ->
+                    try {
+                        val size = fileSystem.metadata(file).size ?: return@mapNotNull null
+                        val cacheEntry = fileSystem.read(file) {
+                            CacheEntry.fromByteArray(readByteArray())
+                        }
+                        CacheFileInfo(file, size, cacheEntry.timestamp)
+                    } catch (_: Exception) {
+                        // Delete corrupted files
+                        try { fileSystem.delete(file) } catch (_: Exception) { }
+                        null
+                    }
                 }
-            }
+                .sortedByDescending { it.timestamp } // Sort by stored timestamp (newest first)
 
-            // Remove expired files from the ones we're keeping
-            val currentTime = getTimeMillis()
-            filesToKeep.forEach { file ->
-                if (currentTime - file.lastModified > config.ttl) {
-                    fileSystem.delete(file.path)
+            var totalSize = 0L
+
+            for (fileInfo in cacheFiles) {
+                // First check: remove expired entries
+                if (isExpired(fileInfo.timestamp)) {
+                    fileSystem.delete(fileInfo.path)
+                    continue
+                }
+
+                // Second check: enforce size limit (LRU eviction)
+                if (totalSize + fileInfo.size <= config.maxSize) {
+                    totalSize += fileInfo.size
+                } else {
+                    fileSystem.delete(fileInfo.path)
                 }
             }
         } catch (e: Exception) {
@@ -291,7 +298,7 @@ private data class CacheEntry(
 private data class CacheFileInfo(
     val path: Path,
     val size: Long,
-    val lastModified: Long
+    val timestamp: Long // Stored timestamp from CacheEntry for consistent TTL checking
 )
 
 /**

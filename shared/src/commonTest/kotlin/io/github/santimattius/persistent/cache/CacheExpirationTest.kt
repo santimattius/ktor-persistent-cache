@@ -60,32 +60,33 @@ class CacheExpirationTest {
     }
 
     @Test
-    fun `given a very short ttl when entry is accessed after expiration then returns null`() = runTest {
-        // Given
-        val config = OkioFileCacheConfig(
-            fileName = "http_cache",
-            maxSize = 10L * 1024 * 1024,
-            ttl = 50, // 50 millisecond TTL
-            cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
-        )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+    fun `given a very short ttl when entry is accessed after expiration then returns null`() =
+        runTest {
+            // Given
+            val config = OkioFileCacheConfig(
+                fileName = "http_cache",
+                maxSize = 10L * 1024 * 1024,
+                ttl = 50, // 50 millisecond TTL
+                cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
+            )
+            val storage = OkioFileCacheStorage(config, fakeFileSystem)
 
-        val url = Url("https://api.example.com/data")
-        val response = TestDataFactory.createCachedResponse(url = url.toString())
+            val url = Url("https://api.example.com/data")
+            val response = TestDataFactory.createCachedResponse(url = url.toString())
 
-        // When
-        storage.store(url, response)
+            // When
+            storage.store(url, response)
 
-        // Use real time delay (not virtual time) by switching to Default dispatcher
-        withContext(Dispatchers.Default) {
-            delay(100) // Wait longer than TTL
+            // Use real time delay (not virtual time) by switching to Default dispatcher
+            withContext(Dispatchers.Default) {
+                delay(100) // Wait longer than TTL
+            }
+
+            val result = storage.find(url, emptyMap())
+
+            // Then
+            assertNull(result, "Entry should be null after TTL expires")
         }
-
-        val result = storage.find(url, emptyMap())
-
-        // Then
-        assertNull(result, "Entry should be null after TTL expires")
-    }
 
     @Test
     fun `given expired entry when find is called then entry file is deleted`() = runTest {

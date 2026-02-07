@@ -5,7 +5,7 @@ import io.ktor.http.HttpProtocolVersion
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 
-fun CachedResponseData.makeCopy(): CachedResponseDataCopy {
+internal fun CachedResponseData.makeCopy(): CachedResponseDataCopy {
     val httpStatusCodeCopy = HttpStatusCodeCopy(
         value = statusCode.value,
         description = statusCode.description
@@ -28,7 +28,7 @@ fun CachedResponseData.makeCopy(): CachedResponseDataCopy {
     )
 }
 
-fun CachedResponseDataCopy.restore(): CachedResponseData {
+internal fun CachedResponseDataCopy.restore(): CachedResponseData {
     val httpStatusCode = HttpStatusCode(
         value = statusCode.value,
         description = statusCode.description

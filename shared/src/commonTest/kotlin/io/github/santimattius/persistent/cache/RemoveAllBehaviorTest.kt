@@ -80,42 +80,53 @@ class RemoveAllBehaviorTest {
     }
 
     @Test
-    fun `given removeAll is called when cache entry does not exist then no error occurs`() = runTest {
-        // Given
-        val url = Url("https://api.example.com/nonexistent")
-        // No entry stored
+    fun `given removeAll is called when cache entry does not exist then no error occurs`() =
+        runTest {
+            // Given
+            val url = Url("https://api.example.com/nonexistent")
+            // No entry stored
 
-        // When & Then - should not throw
-        storage.removeAll(url)
-        assertTrue(true, "removeAll should complete without error for non-existent entry")
-    }
+            // When & Then - should not throw
+            storage.removeAll(url)
+            assertTrue(true, "removeAll should complete without error for non-existent entry")
+        }
 
     @Test
-    fun `given multiple cache entries when removeAll is called for one then others remain intact`() = runTest {
-        // Given
-        val url1 = Url("https://api.example.com/data1")
-        val url2 = Url("https://api.example.com/data2")
-        val url3 = Url("https://api.example.com/data3")
+    fun `given multiple cache entries when removeAll is called for one then others remain intact`() =
+        runTest {
+            // Given
+            val url1 = Url("https://api.example.com/data1")
+            val url2 = Url("https://api.example.com/data2")
+            val url3 = Url("https://api.example.com/data3")
 
-        storage.store(url1, TestDataFactory.createCachedResponse(url = url1.toString(), body = "data1"))
-        storage.store(url2, TestDataFactory.createCachedResponse(url = url2.toString(), body = "data2"))
-        storage.store(url3, TestDataFactory.createCachedResponse(url = url3.toString(), body = "data3"))
+            storage.store(
+                url1,
+                TestDataFactory.createCachedResponse(url = url1.toString(), body = "data1")
+            )
+            storage.store(
+                url2,
+                TestDataFactory.createCachedResponse(url = url2.toString(), body = "data2")
+            )
+            storage.store(
+                url3,
+                TestDataFactory.createCachedResponse(url = url3.toString(), body = "data3")
+            )
 
-        // Verify all three exist
-        val filesBefore = fakeFileSystem.getAllFiles().filter { it.name.endsWith(".cache") }
-        assertEquals(3, filesBefore.size, "Should have three cache files")
+            // Verify all three exist
+            val filesBefore = fakeFileSystem.getAllFiles().filter { it.name.endsWith(".cache") }
+            assertEquals(3, filesBefore.size, "Should have three cache files")
 
-        // When
-        storage.removeAll(url2)
+            // When
+            storage.removeAll(url2)
 
-        // Then
-        assertNull(storage.find(url2, emptyMap()), "Removed entry should not be found")
-        assertNotNull(storage.find(url1, emptyMap()), "Other entry 1 should still exist")
-        assertNotNull(storage.find(url3, emptyMap()), "Other entry 3 should still exist")
+            // Then
+            assertNull(storage.find(url2, emptyMap()), "Removed entry should not be found")
+            assertNotNull(storage.find(url1, emptyMap()), "Other entry 1 should still exist")
+            assertNotNull(storage.find(url3, emptyMap()), "Other entry 3 should still exist")
 
-        val filesAfter = fakeFileSystem.getAllFiles().filter { it.name.endsWith(".cache") }
-        assertEquals(2, filesAfter.size, "Should have two cache files remaining")
-    }
+            val filesAfter = fakeFileSystem.getAllFiles().filter { it.name.endsWith(".cache") }
+            assertEquals(2, filesAfter.size, "Should have two cache files remaining")
+        }
 
     @Test
     fun `given removeAll is called then subsequent store for same url works correctly`() = runTest {

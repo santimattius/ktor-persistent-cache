@@ -58,51 +58,56 @@ class InitializationBehaviorTest {
     }
 
     @Test
-    fun `given storage instance when performing operations then all complete without errors`() = runTest {
-        // Given
-        val config = OkioFileCacheConfig(
-            fileName = "http_cache",
-            maxSize = 10L * 1024 * 1024,
-            ttl = 60 * 60 * 1000,
-            cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
-        )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+    fun `given storage instance when performing operations then all complete without errors`() =
+        runTest {
+            // Given
+            val config = OkioFileCacheConfig(
+                fileName = "http_cache",
+                maxSize = 10L * 1024 * 1024,
+                ttl = 60 * 60 * 1000,
+                cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
+            )
+            val storage = OkioFileCacheStorage(config, fakeFileSystem)
 
-        val url = Url("https://api.example.com/data")
-        val response = TestDataFactory.createCachedResponse(url = url.toString())
+            val url = Url("https://api.example.com/data")
+            val response = TestDataFactory.createCachedResponse(url = url.toString())
 
-        // When & Then - All operations should complete without errors
-        storage.store(url, response)
-        storage.find(url, emptyMap())
-        storage.findAll(url)
-        storage.remove(url, emptyMap())
-        storage.removeAll(url)
+            // When & Then - All operations should complete without errors
+            storage.store(url, response)
+            storage.find(url, emptyMap())
+            storage.findAll(url)
+            storage.remove(url, emptyMap())
+            storage.removeAll(url)
 
-        assertTrue(true, "All operations completed successfully")
-    }
+            assertTrue(true, "All operations completed successfully")
+        }
 
     @Test
-    fun `given multiple storage instances with same config when created then each has its own initialization`() = runTest {
-        // Given
-        val config = OkioFileCacheConfig(
-            fileName = "http_cache",
-            maxSize = 10L * 1024 * 1024,
-            ttl = 60 * 60 * 1000,
-            cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
-        )
+    fun `given multiple storage instances with same config when created then each has its own initialization`() =
+        runTest {
+            // Given
+            val config = OkioFileCacheConfig(
+                fileName = "http_cache",
+                maxSize = 10L * 1024 * 1024,
+                ttl = 60 * 60 * 1000,
+                cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
+            )
 
-        // When - Create multiple instances
-        val storage1 = OkioFileCacheStorage(config, fakeFileSystem)
-        val storage2 = OkioFileCacheStorage(config, fakeFileSystem)
+            // When - Create multiple instances
+            val storage1 = OkioFileCacheStorage(config, fakeFileSystem)
+            val storage2 = OkioFileCacheStorage(config, fakeFileSystem)
 
-        // Then - Both should be able to operate on the same directory
-        val url = Url("https://api.example.com/data")
-        storage1.store(url, TestDataFactory.createCachedResponse(url = url.toString(), body = "from storage1"))
+            // Then - Both should be able to operate on the same directory
+            val url = Url("https://api.example.com/data")
+            storage1.store(
+                url,
+                TestDataFactory.createCachedResponse(url = url.toString(), body = "from storage1")
+            )
 
-        // Storage2 should be able to read what storage1 wrote (shared directory)
-        val result = storage2.find(url, emptyMap())
-        assertTrue(result != null, "Storage2 should read data from shared cache directory")
-    }
+            // Storage2 should be able to read what storage1 wrote (shared directory)
+            val result = storage2.find(url, emptyMap())
+            assertTrue(result != null, "Storage2 should read data from shared cache directory")
+        }
 
     @Test
     fun `given storage with custom directory name when created then uses custom name`() = runTest {
@@ -126,29 +131,30 @@ class InitializationBehaviorTest {
     }
 
     @Test
-    fun `given storage instance when store is called multiple times rapidly then all complete`() = runTest {
-        // Given
-        val config = OkioFileCacheConfig(
-            fileName = "http_cache",
-            maxSize = 10L * 1024 * 1024,
-            ttl = 60 * 60 * 1000,
-            cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
-        )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+    fun `given storage instance when store is called multiple times rapidly then all complete`() =
+        runTest {
+            // Given
+            val config = OkioFileCacheConfig(
+                fileName = "http_cache",
+                maxSize = 10L * 1024 * 1024,
+                ttl = 60 * 60 * 1000,
+                cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
+            )
+            val storage = OkioFileCacheStorage(config, fakeFileSystem)
 
-        // When - Rapid sequential stores (tests that initialization doesn't cause issues)
-        repeat(10) { i ->
-            val url = Url("https://api.example.com/data/$i")
-            storage.store(url, TestDataFactory.createCachedResponse(url = url.toString()))
-        }
+            // When - Rapid sequential stores (tests that initialization doesn't cause issues)
+            repeat(10) { i ->
+                val url = Url("https://api.example.com/data/$i")
+                storage.store(url, TestDataFactory.createCachedResponse(url = url.toString()))
+            }
 
-        // Then - All should complete and be retrievable
-        repeat(10) { i ->
-            val url = Url("https://api.example.com/data/$i")
-            val result = storage.find(url, emptyMap())
-            assertTrue(result != null, "Entry $i should be retrievable")
+            // Then - All should complete and be retrievable
+            repeat(10) { i ->
+                val url = Url("https://api.example.com/data/$i")
+                val result = storage.find(url, emptyMap())
+                assertTrue(result != null, "Entry $i should be retrievable")
+            }
         }
-    }
 
     private fun String.toOkioPath(): okio.Path = this.toPath()
 }

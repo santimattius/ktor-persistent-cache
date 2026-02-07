@@ -51,10 +51,6 @@ class OkioFileCacheStorageTest {
         fakeFileSystem.clear()
     }
 
-    // ========================================================================
-    // STORE AND FIND TESTS
-    // ========================================================================
-
     @Test
     fun `given a cached response when stored then it can be retrieved`() = runTest {
         // Given
@@ -92,48 +88,48 @@ class OkioFileCacheStorageTest {
     }
 
     @Test
-    fun `given multiple cached responses when stored then each can be retrieved independently`() = runTest {
-        // Given
-        val url1 = Url("https://api.example.com/users")
-        val url2 = Url("https://api.example.com/posts")
-        val response1 = TestDataFactory.createCachedResponse(url = url1.toString(), body = "users")
-        val response2 = TestDataFactory.createCachedResponse(url = url2.toString(), body = "posts")
+    fun `given multiple cached responses when stored then each can be retrieved independently`() =
+        runTest {
+            // Given
+            val url1 = Url("https://api.example.com/users")
+            val url2 = Url("https://api.example.com/posts")
+            val response1 =
+                TestDataFactory.createCachedResponse(url = url1.toString(), body = "users")
+            val response2 =
+                TestDataFactory.createCachedResponse(url = url2.toString(), body = "posts")
 
-        // When
-        storage.store(url1, response1)
-        storage.store(url2, response2)
+            // When
+            storage.store(url1, response1)
+            storage.store(url2, response2)
 
-        // Then
-        val retrieved1 = storage.find(url1, emptyMap())
-        val retrieved2 = storage.find(url2, emptyMap())
+            // Then
+            val retrieved1 = storage.find(url1, emptyMap())
+            val retrieved2 = storage.find(url2, emptyMap())
 
-        assertNotNull(retrieved1)
-        assertNotNull(retrieved2)
-        assertEquals("users", retrieved1.body.decodeToString())
-        assertEquals("posts", retrieved2.body.decodeToString())
-    }
-
-    // ========================================================================
-    // FIND ALL TESTS
-    // ========================================================================
+            assertNotNull(retrieved1)
+            assertNotNull(retrieved2)
+            assertEquals("users", retrieved1.body.decodeToString())
+            assertEquals("posts", retrieved2.body.decodeToString())
+        }
 
     @Test
-    fun `given a cached response when findAll is called then returns set containing the response`() = runTest {
-        // Given
-        val url = Url("https://api.example.com/data")
-        val cachedResponse = TestDataFactory.createCachedResponse(
-            url = url.toString(),
-            body = "data response"
-        )
-        storage.store(url, cachedResponse)
+    fun `given a cached response when findAll is called then returns set containing the response`() =
+        runTest {
+            // Given
+            val url = Url("https://api.example.com/data")
+            val cachedResponse = TestDataFactory.createCachedResponse(
+                url = url.toString(),
+                body = "data response"
+            )
+            storage.store(url, cachedResponse)
 
-        // When
-        val results = storage.findAll(url)
+            // When
+            val results = storage.findAll(url)
 
-        // Then
-        assertEquals(1, results.size, "Should return set with one entry")
-        assertEquals("data response", results.first().body.decodeToString())
-    }
+            // Then
+            assertEquals(1, results.size, "Should return set with one entry")
+            assertEquals("data response", results.first().body.decodeToString())
+        }
 
     @Test
     fun `given no cached response when findAll is called then returns empty set`() = runTest {
@@ -147,10 +143,6 @@ class OkioFileCacheStorageTest {
         // Then
         assertTrue(results.isEmpty(), "Should return empty set for non-existent URL")
     }
-
-    // ========================================================================
-    // REMOVE TESTS
-    // ========================================================================
 
     @Test
     fun `given a cached response when removed then it can no longer be found`() = runTest {
@@ -179,10 +171,6 @@ class OkioFileCacheStorageTest {
         storage.remove(url, emptyMap())
     }
 
-    // ========================================================================
-    // REMOVE ALL TESTS
-    // ========================================================================
-
     @Test
     fun `given a cached response when removeAll is called then entry is deleted`() = runTest {
         // Given
@@ -201,51 +189,55 @@ class OkioFileCacheStorageTest {
     }
 
     @Test
-    fun `given multiple urls cached when removeAll is called for one url then only that entry is removed`() = runTest {
-        // Given
-        val url1 = Url("https://api.example.com/users")
-        val url2 = Url("https://api.example.com/posts")
-        storage.store(url1, TestDataFactory.createCachedResponse(url = url1.toString(), body = "users"))
-        storage.store(url2, TestDataFactory.createCachedResponse(url = url2.toString(), body = "posts"))
+    fun `given multiple urls cached when removeAll is called for one url then only that entry is removed`() =
+        runTest {
+            // Given
+            val url1 = Url("https://api.example.com/users")
+            val url2 = Url("https://api.example.com/posts")
+            storage.store(
+                url1,
+                TestDataFactory.createCachedResponse(url = url1.toString(), body = "users")
+            )
+            storage.store(
+                url2,
+                TestDataFactory.createCachedResponse(url = url2.toString(), body = "posts")
+            )
 
-        // When
-        storage.removeAll(url1)
+            // When
+            storage.removeAll(url1)
 
-        // Then
-        assertNull(storage.find(url1, emptyMap()), "Removed URL should not be found")
-        assertNotNull(storage.find(url2, emptyMap()), "Other URL should still exist")
-    }
-
-    // ========================================================================
-    // CACHE UPDATE TESTS
-    // ========================================================================
+            // Then
+            assertNull(storage.find(url1, emptyMap()), "Removed URL should not be found")
+            assertNotNull(storage.find(url2, emptyMap()), "Other URL should still exist")
+        }
 
     @Test
-    fun `given an existing cache entry when stored again with new data then entry is updated`() = runTest {
-        // Given
-        val url = Url("https://api.example.com/data")
-        val originalResponse = TestDataFactory.createCachedResponse(
-            url = url.toString(),
-            body = "original data"
-        )
-        storage.store(url, originalResponse)
+    fun `given an existing cache entry when stored again with new data then entry is updated`() =
+        runTest {
+            // Given
+            val url = Url("https://api.example.com/data")
+            val originalResponse = TestDataFactory.createCachedResponse(
+                url = url.toString(),
+                body = "original data"
+            )
+            storage.store(url, originalResponse)
 
-        // When
-        val updatedResponse = TestDataFactory.createCachedResponse(
-            url = url.toString(),
-            body = "updated data"
-        )
-        storage.store(url, updatedResponse)
+            // When
+            val updatedResponse = TestDataFactory.createCachedResponse(
+                url = url.toString(),
+                body = "updated data"
+            )
+            storage.store(url, updatedResponse)
 
-        // Then
-        val retrieved = storage.find(url, emptyMap())
-        assertNotNull(retrieved)
-        assertEquals("updated data", retrieved.body.decodeToString(), "Should return updated data")
-    }
-
-    // ========================================================================
-    // CONCURRENT ACCESS TESTS (Mutex deadlock fix verification)
-    // ========================================================================
+            // Then
+            val retrieved = storage.find(url, emptyMap())
+            assertNotNull(retrieved)
+            assertEquals(
+                "updated data",
+                retrieved.body.decodeToString(),
+                "Should return updated data"
+            )
+        }
 
     @Test
     fun `given store operation when cleanup runs internally then no deadlock occurs`() = runTest {
@@ -274,33 +266,30 @@ class OkioFileCacheStorageTest {
     }
 
     @Test
-    fun `given multiple store operations when executed sequentially then all complete without deadlock`() = runTest {
-        // Given
-        val smallConfig = OkioFileCacheConfig(
-            fileName = "http_cache",
-            maxSize = 500, // Small size to ensure cleanup runs
-            ttl = 60 * 60 * 1000,
-            cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
-        )
-        val storageWithCleanup = OkioFileCacheStorage(smallConfig, fakeFileSystem)
-
-        // When - Multiple stores, each triggering cleanup
-        repeat(5) { i ->
-            val url = Url("https://api.example.com/data/$i")
-            val response = TestDataFactory.createCachedResponse(
-                url = url.toString(),
-                body = "data for request $i with some additional content"
+    fun `given multiple store operations when executed sequentially then all complete without deadlock`() =
+        runTest {
+            // Given
+            val smallConfig = OkioFileCacheConfig(
+                fileName = "http_cache",
+                maxSize = 500, // Small size to ensure cleanup runs
+                ttl = 60 * 60 * 1000,
+                cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
             )
-            storageWithCleanup.store(url, response)
+            val storageWithCleanup = OkioFileCacheStorage(smallConfig, fakeFileSystem)
+
+            // When - Multiple stores, each triggering cleanup
+            repeat(5) { i ->
+                val url = Url("https://api.example.com/data/$i")
+                val response = TestDataFactory.createCachedResponse(
+                    url = url.toString(),
+                    body = "data for request $i with some additional content"
+                )
+                storageWithCleanup.store(url, response)
+            }
+
+            // Then - All operations completed (no deadlock)
+            assertTrue(true, "All store operations completed without deadlock")
         }
-
-        // Then - All operations completed (no deadlock)
-        assertTrue(true, "All store operations completed without deadlock")
-    }
-
-    // ========================================================================
-    // DIRECTORY CREATION TESTS
-    // ========================================================================
 
     @Test
     fun `given cache storage when initialized then cache directory is created`() = runTest {
@@ -314,10 +303,6 @@ class OkioFileCacheStorageTest {
             "Cache directory should be created on initialization"
         )
     }
-
-    // ========================================================================
-    // HELPER EXTENSIONS
-    // ========================================================================
 
     private fun String.toOkioPath(): okio.Path = this.toPath()
 }

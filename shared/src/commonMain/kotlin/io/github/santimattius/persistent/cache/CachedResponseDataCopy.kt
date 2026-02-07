@@ -5,7 +5,7 @@ import io.ktor.util.date.GMTDate
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CachedResponseDataCopy(
+internal data class CachedResponseDataCopy(
     val url: Url,
     val statusCode: HttpStatusCodeCopy,
     val requestTime: GMTDate,
@@ -35,7 +35,7 @@ data class CachedResponseDataCopy(
 }
 
 @Serializable
-data class HttpStatusCodeCopy(val value: Int, val description: String)
+internal data class HttpStatusCodeCopy(val value: Int, val description: String)
 
 @Serializable
-data class HttpProtocolVersionCopy(val name: String, val major: Int, val minor: Int)
+internal data class HttpProtocolVersionCopy(val name: String, val major: Int, val minor: Int)

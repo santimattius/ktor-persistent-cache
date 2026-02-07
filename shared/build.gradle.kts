@@ -10,7 +10,7 @@ plugins {
 
 kotlin {
     androidLibrary {
-        namespace = "com.santimattius.kmp.shared"
+        namespace = "io.github.santimattius.persistent.cache"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
@@ -25,7 +25,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "Shared"
+            baseName = "KtorPersistentCache"
             isStatic = true
         }
     }
@@ -52,12 +52,12 @@ kotlin {
 // https://github.com/vanniktech/gradle-maven-publish-plugin
 // Supports com.android.kotlin.multiplatform.library out of the box.
 mavenPublishing {
-    coordinates("com.santimattius.kmp", "shared", "1.0.0-SNAPSHOT")
+    coordinates("io.github.santimattius", "ktor-persistent-cache", "1.0.0-SNAPSHOT")
     pom {
-        name.set("KMP Basic Template - Shared")
-        description.set("Kotlin Multiplatform shared module (Android + iOS).")
+        name.set("Ktor Persistent Cache")
+        description.set("Kotlin Multiplatform library for persistent HTTP caching with Ktor and Okio. Supports Android and iOS.")
         inceptionYear.set("2026")
-        url.set("https://github.com/santimattius/kmp-basic-template/")
+        url.set("https://github.com/santimattius/ktor-persistent-cache/")
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
@@ -68,14 +68,14 @@ mavenPublishing {
         developers {
             developer {
                 id.set("santimattius")
-                name.set("Santi Mattius")
+                name.set("Santiago Mattiauda")
                 url.set("https://github.com/santimattius/")
             }
         }
         scm {
-            url.set("https://github.com/santimattius/kmp-basic-template/")
-            connection.set("scm:git:git://github.com/santimattius/kmp-basic-template.git")
-            developerConnection.set("scm:git:ssh://git@github.com/santimattius/kmp-basic-template.git")
+            url.set("https://github.com/santimattius/ktor-persistent-cache/")
+            connection.set("scm:git:git://github.com/santimattius/ktor-persistent-cache.git")
+            developerConnection.set("scm:git:ssh://git@github.com/santimattius/ktor-persistent-cache.git")
         }
     }
     // Maven Central: uncomment and configure credentials (see docs/PUBLISHING.md)
