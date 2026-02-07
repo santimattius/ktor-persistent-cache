@@ -65,6 +65,14 @@ internal class OkioFileCacheStorage(
         }
     }
 
+    /**
+     * Looks up a cached response for the given [url] and [varyKeys].
+     * Returns null if not found, expired, or on read error.
+     *
+     * @param url The request URL.
+     * @param varyKeys Vary keys for content negotiation.
+     * @return The cached response, or null.
+     */
     override suspend fun find(url: Url, varyKeys: Map<String, String>): CachedResponseData? {
         return cacheMutex.withLock {
             try {
@@ -91,6 +99,13 @@ internal class OkioFileCacheStorage(
         }
     }
 
+    /**
+     * Returns all cached responses for the given [url], for any vary keys.
+     * Expired or corrupted entries are skipped (and removed when expired).
+     *
+     * @param url The request URL.
+     * @return Set of all matching cached responses.
+     */
     override suspend fun findAll(url: Url): Set<CachedResponseData> {
         return cacheMutex.withLock {
             try {
@@ -272,6 +287,9 @@ internal class OkioFileCacheStorage(
     }
 }
 
+/**
+ * On-disk representation of a single cache entry (URL, serialized response, timestamp).
+ */
 @Serializable
 private data class CacheEntry(
     val url: String,
@@ -279,6 +297,12 @@ private data class CacheEntry(
     val timestamp: Long
 ) {
     companion object {
+        /**
+         * Deserializes a [CacheEntry] from ProtoBuf-encoded bytes.
+         *
+         * @param bytes The serialized cache entry.
+         * @return The decoded [CacheEntry].
+         */
         @OptIn(ExperimentalSerializationApi::class)
         fun fromByteArray(bytes: ByteArray): CacheEntry {
             // Implement deserialization from ByteArray to CacheEntry
@@ -287,6 +311,11 @@ private data class CacheEntry(
         }
     }
 
+    /**
+     * Serializes this [CacheEntry] to ProtoBuf-encoded bytes for storage.
+     *
+     * @return The serialized byte array.
+     */
     @OptIn(ExperimentalSerializationApi::class)
     fun toByteArray(): ByteArray {
         // Implement serialization from CacheEntry to ByteArray
@@ -295,6 +324,9 @@ private data class CacheEntry(
     }
 }
 
+/**
+ * Metadata for a cache file used during cleanup (path, size, stored timestamp).
+ */
 private data class CacheFileInfo(
     val path: Path,
     val size: Long,

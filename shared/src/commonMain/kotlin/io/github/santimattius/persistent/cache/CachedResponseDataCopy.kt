@@ -4,6 +4,22 @@ import io.ktor.http.Url
 import io.ktor.util.date.GMTDate
 import kotlinx.serialization.Serializable
 
+/**
+ * Serializable copy of [io.ktor.client.plugins.cache.storage.CachedResponseData] for persistence.
+ *
+ * Uses serializable types (e.g. [HttpStatusCodeCopy], [HttpProtocolVersionCopy]) so the response
+ * can be encoded/decoded across platforms.
+ *
+ * @property url The request URL.
+ * @property statusCode HTTP status code copy.
+ * @property requestTime Time of the original request.
+ * @property responseTime Time of the cached response.
+ * @property version HTTP protocol version copy.
+ * @property expires Expiration time of the cached entry.
+ * @property headers Response headers.
+ * @property varyKeys Vary keys for content negotiation.
+ * @property body Response body bytes.
+ */
 @Serializable
 internal data class CachedResponseDataCopy(
     val url: Url,
@@ -34,8 +50,21 @@ internal data class CachedResponseDataCopy(
     }
 }
 
+/**
+ * Serializable copy of [io.ktor.http.HttpStatusCode] for persistence.
+ *
+ * @property value HTTP status code value (e.g. 200, 404).
+ * @property description Status description (e.g. "OK", "Not Found").
+ */
 @Serializable
 internal data class HttpStatusCodeCopy(val value: Int, val description: String)
 
+/**
+ * Serializable copy of [io.ktor.http.HttpProtocolVersion] for persistence.
+ *
+ * @property name Protocol name (e.g. "HTTP").
+ * @property major Major version number.
+ * @property minor Minor version number.
+ */
 @Serializable
 internal data class HttpProtocolVersionCopy(val name: String, val major: Int, val minor: Int)

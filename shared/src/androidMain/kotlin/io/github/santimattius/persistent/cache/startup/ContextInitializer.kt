@@ -10,13 +10,25 @@ import android.content.ContextWrapper
 import android.util.Log
 import androidx.startup.Initializer
 
+/**
+ * [Initializer] that injects the application [Context] for use by the persistent cache.
+ *
+ * Register in the app's manifest or via App Startup so the cache can resolve the Android cache directory.
+ * Must run before [getCacheDirectoryProvider] is used on Android.
+ */
 class ContextInitializer : Initializer<Unit> {
 
+    /**
+     * Injects the given [context] as the global application context after validating it is safe to store.
+     */
     override fun create(context: Context) {
         injectContext(context = context)
         Log.d("AppContextInitializer", "AppContextInitializer initialized")
     }
 
+    /**
+     * No dependencies; this initializer can run first.
+     */
     override fun dependencies(): List<Class<out Initializer<*>?>?> {
         return emptyList()
     }

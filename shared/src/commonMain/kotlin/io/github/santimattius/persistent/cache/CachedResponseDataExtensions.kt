@@ -5,6 +5,11 @@ import io.ktor.http.HttpProtocolVersion
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 
+/**
+ * Converts this [CachedResponseData] into a [CachedResponseDataCopy] for serialization and storage.
+ *
+ * @return A serializable copy of this cached response.
+ */
 internal fun CachedResponseData.makeCopy(): CachedResponseDataCopy {
     val httpStatusCodeCopy = HttpStatusCodeCopy(
         value = statusCode.value,
@@ -28,6 +33,11 @@ internal fun CachedResponseData.makeCopy(): CachedResponseDataCopy {
     )
 }
 
+/**
+ * Restores this [CachedResponseDataCopy] back to a [CachedResponseData] instance for use by the cache layer.
+ *
+ * @return The restored [CachedResponseData] equivalent to the original cached response.
+ */
 internal fun CachedResponseDataCopy.restore(): CachedResponseData {
     val httpStatusCode = HttpStatusCode(
         value = statusCode.value,
