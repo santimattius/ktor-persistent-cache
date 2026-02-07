@@ -30,6 +30,8 @@ kotlin {
         }
     }
 
+    jvm()
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.startup.runtime)
