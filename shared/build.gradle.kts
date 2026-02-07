@@ -54,7 +54,10 @@ kotlin {
 // https://github.com/vanniktech/gradle-maven-publish-plugin
 // Supports com.android.kotlin.multiplatform.library out of the box.
 mavenPublishing {
-    coordinates("io.github.santimattius", "ktor-persistent-cache", "1.0.0-SNAPSHOT")
+    // Maven Central: uncomment and configure credentials (see docs/PUBLISHING.md)
+    publishToMavenCentral()
+    signAllPublications()
+    coordinates("io.github.santimattius", "ktor-persistent-cache", "1.0.0-ALPHA01")
     pom {
         name.set("Ktor Persistent Cache")
         description.set("Kotlin Multiplatform library for persistent HTTP caching with Ktor and Okio. Supports Android and iOS.")
@@ -80,7 +83,5 @@ mavenPublishing {
             developerConnection.set("scm:git:ssh://git@github.com/santimattius/ktor-persistent-cache.git")
         }
     }
-    // Maven Central: uncomment and configure credentials (see docs/PUBLISHING.md)
-    // publishToMavenCentral()
-    // signAllPublications()
+
 }
