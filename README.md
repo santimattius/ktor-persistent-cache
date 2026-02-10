@@ -134,8 +134,7 @@ No setup. The library uses a subdirectory of the JVM temp directory.
 
 ## Quick start
 
-1. Create an [HttpClient](https://ktor.io/docs/create-client.html) and call **installPersistentCache
-   ** with a [CacheConfig]:
+1. Create an [HttpClient](https://ktor.io/docs/create-client.html) and call **installPersistentCache** with a [CacheConfig]:
 
 ```kotlin
 import io.ktor.client.*
