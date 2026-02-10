@@ -5,19 +5,26 @@ import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.cache.storage.CacheStorage
 
 /**
- * Configures the HTTP client with caching support based on the provided configuration.
+ * Installs persistent file-based HTTP caching on this client using [HttpCache].
  *
- * @param config The cache configuration
- * @param cacheDirectoryProvider Optional custom cache directory provider
+ * When [CacheConfig.enabled] is true, responses are stored on disk via [OkioFileCacheStorage]
+ * under the directory supplied by [cacheDirectoryProvider], respecting [CacheConfig.maxCacheSize]
+ * and [CacheConfig.cacheTtl]. When false, the cache plugin is still installed but uses
+ * [CacheStorage.Disabled], so no storage is used.
+ *
+ * Public vs private storage is controlled by [CacheConfig.isPublic]; shared vs unshared
+ * by [CacheConfig.isShared].
+ *
+ * @param config Cache behavior and limits; see [CacheConfig].
+ * @param cacheDirectoryProvider Supplies the root directory for the cache. Defaults to the
+ *   platform-specific provider from [getCacheDirectoryProvider]; override for custom paths or tests.
  */
-fun HttpClientConfig<*>.configureCache(
+fun HttpClientConfig<*>.installPersistentCache(
     config: CacheConfig,
     cacheDirectoryProvider: CacheDirectoryProvider = getCacheDirectoryProvider()
 ) {
-    if (!config.enabled) return
-    install(HttpCache) {
-        isShared = config.isShared
-        val storage = OkioFileCacheStorage(
+    val storage = if (config.enabled) {
+        OkioFileCacheStorage(
             config = OkioFileCacheConfig(
                 fileName = config.cacheDirectory,
                 maxSize = config.maxCacheSize,
@@ -25,15 +32,15 @@ fun HttpClientConfig<*>.configureCache(
                 cacheDirectoryProvider = cacheDirectoryProvider
             )
         )
-        privateStorage(storage)
+    } else {
+        CacheStorage.Disabled
     }
-}
-
-/**
- * Disables caching for this client.
- */
-internal fun HttpClientConfig<*>.disableCaching() {
     install(HttpCache) {
-        privateStorage(CacheStorage.Disabled)
+        isShared = config.isShared
+        if (config.isPublic) {
+            publicStorage(storage)
+        } else {
+            privateStorage(storage)
+        }
     }
 }
