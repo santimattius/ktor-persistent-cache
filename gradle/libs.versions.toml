@@ -18,7 +18,7 @@ ktorVersion = "3.4.0"
 okio = "3.16.4"
 kotlinxSerializationJson = "1.10.0"
 kotlinxSerializationProtobuf = "1.10.0"
-kotlinxCoroutines = "1.10.1"
+kotlinxCoroutines = "1.10.2"
 startupRuntime = "1.2.0"
 
 androidx-espresso = "3.7.0"
