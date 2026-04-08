@@ -24,7 +24,8 @@ import okio.Buffer
  */
 internal class OkioFileCacheStorage(
     private val config: OkioFileCacheConfig,
-    private val fileSystem: FileSystem = FileSystem.SYSTEM
+    private val fileSystem: FileSystem = FileSystem.SYSTEM,
+    private val clock: () -> Long = { getTimeMillis() }
 ) : CacheStorage {
     private val cacheDir = config.cacheDirectoryProvider.cacheDirectory / config.fileName
     private val cacheMutex = Mutex()
@@ -49,7 +50,7 @@ internal class OkioFileCacheStorage(
                 val cacheEntry = CacheEntry(
                     url = url.toString(),
                     response = data.makeCopy(),
-                    timestamp = getTimeMillis()
+                    timestamp = clock()
                 )
                 fileSystem.write(cacheFile) {
                     write(cacheEntry.toByteArray())
@@ -231,7 +232,7 @@ internal class OkioFileCacheStorage(
         Buffer().write(input).sha256().hex()
 
     private fun isExpired(timestamp: Long): Boolean {
-        val currentTime = getTimeMillis()
+        val currentTime = clock()
         val elapsed = currentTime - timestamp
         return elapsed > config.ttl
     }

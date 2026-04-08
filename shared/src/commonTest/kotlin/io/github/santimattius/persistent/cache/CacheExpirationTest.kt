@@ -2,12 +2,10 @@ package io.github.santimattius.persistent.cache
 
 import io.github.santimattius.persistent.cache.doubles.FakeCacheDirectoryProvider
 import io.github.santimattius.persistent.cache.doubles.FakeFileSystem
+import io.github.santimattius.persistent.cache.doubles.TestClock
 import io.github.santimattius.persistent.cache.doubles.TestDataFactory
 import io.ktor.http.Url
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withContext
 import okio.Path.Companion.toPath
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -40,13 +38,14 @@ class CacheExpirationTest {
     @Test
     fun `given a cached entry when ttl has not expired then entry is returned`() = runTest {
         // Given
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
             ttl = 60 * 60 * 1000, // 1 hour TTL
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         val url = Url("https://api.example.com/data")
         val response = TestDataFactory.createCachedResponse(url = url.toString())
@@ -63,25 +62,21 @@ class CacheExpirationTest {
     fun `given a very short ttl when entry is accessed after expiration then returns null`() =
         runTest {
             // Given
+            val clock = TestClock()
             val config = OkioFileCacheConfig(
                 fileName = "http_cache",
                 maxSize = 10L * 1024 * 1024,
-                ttl = 50, // 50 millisecond TTL
+                ttl = 50,
                 cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
             )
-            val storage = OkioFileCacheStorage(config, fakeFileSystem)
+            val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
             val url = Url("https://api.example.com/data")
             val response = TestDataFactory.createCachedResponse(url = url.toString())
 
             // When
             storage.store(url, response)
-
-            // Use real time delay (not virtual time) by switching to Default dispatcher
-            withContext(Dispatchers.Default) {
-                delay(100) // Wait longer than TTL
-            }
-
+            clock.advance(100) // Advance past TTL
             val result = storage.find(url, emptyMap())
 
             // Then
@@ -91,13 +86,14 @@ class CacheExpirationTest {
     @Test
     fun `given expired entry when find is called then entry file is deleted`() = runTest {
         // Given
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
-            ttl = 50, // 50 millisecond TTL
+            ttl = 50,
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         val url = Url("https://api.example.com/data")
         val response = TestDataFactory.createCachedResponse(url = url.toString())
@@ -109,10 +105,8 @@ class CacheExpirationTest {
         }
         assertTrue(filesBeforeExpiration.isNotEmpty(), "Cache file should exist after store")
 
-        // When - wait for expiration using real time and access
-        withContext(Dispatchers.Default) {
-            delay(100) // Wait longer than TTL
-        }
+        // When - advance past TTL and access
+        clock.advance(100)
         storage.find(url, emptyMap())
 
         // Then - file should be deleted
@@ -125,22 +119,21 @@ class CacheExpirationTest {
     @Test
     fun `given expired entry when findAll is called then returns empty set`() = runTest {
         // Given
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
-            ttl = 50, // 50 millisecond TTL
+            ttl = 50,
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         val url = Url("https://api.example.com/data")
         val response = TestDataFactory.createCachedResponse(url = url.toString())
         storage.store(url, response)
 
-        // When - wait for expiration using real time
-        withContext(Dispatchers.Default) {
-            delay(100) // Wait longer than TTL
-        }
+        // When - advance past TTL
+        clock.advance(100)
         val results = storage.findAll(url)
 
         // Then
