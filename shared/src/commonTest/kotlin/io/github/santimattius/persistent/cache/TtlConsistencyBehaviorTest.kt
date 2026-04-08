@@ -2,12 +2,10 @@ package io.github.santimattius.persistent.cache
 
 import io.github.santimattius.persistent.cache.doubles.FakeCacheDirectoryProvider
 import io.github.santimattius.persistent.cache.doubles.FakeFileSystem
+import io.github.santimattius.persistent.cache.doubles.TestClock
 import io.github.santimattius.persistent.cache.doubles.TestDataFactory
 import io.ktor.http.Url
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withContext
 import okio.Path.Companion.toPath
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -44,14 +42,15 @@ class TtlConsistencyBehaviorTest {
 
     @Test
     fun `given entry stored when cleanup runs before ttl expires then entry is kept`() = runTest {
-        // Given - Configure with short TTL but don't let it expire
+        // Given - Configure with long TTL that won't expire during test
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
             ttl = 60 * 60 * 1000, // 1 hour - won't expire during test
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         val url = Url("https://api.example.com/data")
         val response = TestDataFactory.createCachedResponse(url = url.toString())
@@ -68,21 +67,20 @@ class TtlConsistencyBehaviorTest {
     fun `given entry stored when ttl expires then both find and cleanup treat it as expired`() =
         runTest {
             // Given - Very short TTL
+            val clock = TestClock()
             val config = OkioFileCacheConfig(
                 fileName = "http_cache",
                 maxSize = 10L * 1024 * 1024,
-                ttl = 50, // 50ms TTL
+                ttl = 50,
                 cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
             )
-            val storage = OkioFileCacheStorage(config, fakeFileSystem)
+            val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
             val url = Url("https://api.example.com/data")
             storage.store(url, TestDataFactory.createCachedResponse(url = url.toString()))
 
-            // When - Wait for TTL to expire
-            withContext(Dispatchers.Default) {
-                delay(100)
-            }
+            // When - Advance clock past TTL
+            clock.advance(100)
 
             // Then - find() should return null (expired)
             val result = storage.find(url, emptyMap())
@@ -93,13 +91,14 @@ class TtlConsistencyBehaviorTest {
     fun `given expired entries when new entry stored then cleanup removes expired entries first`() =
         runTest {
             // Given
+            val clock = TestClock()
             val config = OkioFileCacheConfig(
                 fileName = "http_cache",
                 maxSize = 10L * 1024 * 1024,
-                ttl = 50, // 50ms TTL
+                ttl = 50,
                 cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
             )
-            val storage = OkioFileCacheStorage(config, fakeFileSystem)
+            val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
             // Store initial entries
             val url1 = Url("https://api.example.com/data1")
@@ -108,9 +107,7 @@ class TtlConsistencyBehaviorTest {
             storage.store(url2, TestDataFactory.createCachedResponse(url = url2.toString()))
 
             // Let entries expire
-            withContext(Dispatchers.Default) {
-                delay(100)
-            }
+            clock.advance(100)
 
             // When - Store a new entry (triggers cleanup)
             val url3 = Url("https://api.example.com/data3")
@@ -126,15 +123,16 @@ class TtlConsistencyBehaviorTest {
     fun `given non-expired entries exceeding size limit when cleanup runs then oldest entries removed`() =
         runTest {
             // Given - Very small size limit
+            val clock = TestClock()
             val config = OkioFileCacheConfig(
                 fileName = "http_cache",
                 maxSize = 500, // Small size to force eviction
                 ttl = 60 * 60 * 1000, // Long TTL - entries won't expire
                 cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
             )
-            val storage = OkioFileCacheStorage(config, fakeFileSystem)
+            val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
-            // When - Store multiple entries that exceed size limit
+            // When - Store multiple entries that exceed size limit (advance clock so each has a unique timestamp)
             repeat(5) { i ->
                 val url = Url("https://api.example.com/data/$i")
                 storage.store(
@@ -143,6 +141,7 @@ class TtlConsistencyBehaviorTest {
                         body = "Response body for entry $i with some content to take up space"
                     )
                 )
+                clock.advance(1)
             }
 
             // Then - Some entries should be evicted (LRU), but cache should function
@@ -157,13 +156,14 @@ class TtlConsistencyBehaviorTest {
     @Test
     fun `given corrupted cache file when cleanup runs then corrupted file is removed`() = runTest {
         // Given
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
             ttl = 60 * 60 * 1000,
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         // Store a valid entry
         val validUrl = Url("https://api.example.com/valid")
@@ -186,13 +186,14 @@ class TtlConsistencyBehaviorTest {
     fun `given mix of expired and valid entries when findAll called then only valid entries returned`() =
         runTest {
             // Given
+            val clock = TestClock()
             val config = OkioFileCacheConfig(
                 fileName = "http_cache",
                 maxSize = 10L * 1024 * 1024,
-                ttl = 50, // 50ms TTL
+                ttl = 50,
                 cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
             )
-            val storage = OkioFileCacheStorage(config, fakeFileSystem)
+            val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
             val url = Url("https://api.example.com/data")
 
@@ -206,9 +207,7 @@ class TtlConsistencyBehaviorTest {
             )
 
             // Let it expire
-            withContext(Dispatchers.Default) {
-                delay(100)
-            }
+            clock.advance(100)
 
             // Store fresh entry
             storage.store(
@@ -230,21 +229,20 @@ class TtlConsistencyBehaviorTest {
     @Test
     fun `given entry at exact ttl boundary when checked then treated as expired`() = runTest {
         // Given - This tests the boundary condition where elapsed == ttl
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
             ttl = 50,
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         val url = Url("https://api.example.com/data")
         storage.store(url, TestDataFactory.createCachedResponse(url = url.toString()))
 
-        // When - Wait exactly at TTL boundary (plus small buffer for timing)
-        withContext(Dispatchers.Default) {
-            delay(60) // Slightly over TTL
-        }
+        // When - Advance clock slightly over TTL boundary
+        clock.advance(51)
 
         // Then - Should be considered expired
         val result = storage.find(url, emptyMap())
@@ -254,21 +252,20 @@ class TtlConsistencyBehaviorTest {
     @Test
     fun `given zero ttl config when entry stored then immediately expires`() = runTest {
         // Given - TTL of 0 means immediate expiration
+        val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
             maxSize = 10L * 1024 * 1024,
             ttl = 0, // Zero TTL
             cacheDirectoryProvider = FakeCacheDirectoryProvider("/fake/cache")
         )
-        val storage = OkioFileCacheStorage(config, fakeFileSystem)
+        val storage = OkioFileCacheStorage(config, fakeFileSystem, clock::now)
 
         val url = Url("https://api.example.com/data")
         storage.store(url, TestDataFactory.createCachedResponse(url = url.toString()))
 
-        // Small delay to ensure time has passed
-        withContext(Dispatchers.Default) {
-            delay(10)
-        }
+        // Advance clock by 1ms so elapsed > ttl (0)
+        clock.advance(1)
 
         // When
         val result = storage.find(url, emptyMap())

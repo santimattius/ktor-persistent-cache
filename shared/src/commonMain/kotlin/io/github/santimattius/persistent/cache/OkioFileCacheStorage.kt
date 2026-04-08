@@ -14,8 +14,7 @@ import okio.FileSystem
 import okio.Path
 import okio.SYSTEM
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import okio.Buffer
 
 /**
  * A [CacheStorage] implementation that stores cached responses on the filesystem using Okio.
@@ -25,7 +24,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  */
 internal class OkioFileCacheStorage(
     private val config: OkioFileCacheConfig,
-    private val fileSystem: FileSystem = FileSystem.SYSTEM
+    private val fileSystem: FileSystem = FileSystem.SYSTEM,
+    private val clock: () -> Long = { getTimeMillis() }
 ) : CacheStorage {
     private val cacheDir = config.cacheDirectoryProvider.cacheDirectory / config.fileName
     private val cacheMutex = Mutex()
@@ -50,7 +50,7 @@ internal class OkioFileCacheStorage(
                 val cacheEntry = CacheEntry(
                     url = url.toString(),
                     response = data.makeCopy(),
-                    timestamp = getTimeMillis()
+                    timestamp = clock()
                 )
                 fileSystem.write(cacheFile) {
                     write(cacheEntry.toByteArray())
@@ -194,10 +194,11 @@ internal class OkioFileCacheStorage(
 
     /**
      * Generates the cache file path for a URL with optional vary keys.
-     * Uses URL-safe Base64 encoding to avoid filesystem issues with special characters.
+     * Uses SHA-256 hashing to produce a fixed-length (64 hex chars) filename component,
+     * avoiding filesystem limits on file name length regardless of URL length.
      *
-     * File naming scheme: {urlKey}_{varyKeysHash}.cache
-     * - urlKey: Base64 encoded URL
+     * File naming scheme: {urlHash}_{varyKeysHash}.cache
+     * - urlHash: SHA-256 hex digest of the URL string (always 64 chars)
      * - varyKeysHash: Hash of sorted vary keys (or "0" if empty)
      *
      * This scheme allows prefix matching for findAll/removeAll operations.
@@ -206,9 +207,8 @@ internal class OkioFileCacheStorage(
      * @param varyKeys Optional vary keys for content negotiation differentiation
      * @return The cache file path
      */
-    @OptIn(ExperimentalEncodingApi::class)
     private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): Path {
-        val urlKey = Base64.UrlSafe.encode(url.toString().encodeToByteArray())
+        val urlKey = sha256Hex(url.toString().encodeToByteArray())
         val varyKeysHash = if (varyKeys.isEmpty()) {
             "0"
         } else {
@@ -224,13 +224,15 @@ internal class OkioFileCacheStorage(
      * Gets the URL-only cache key prefix for matching all entries of a URL.
      * Used by findAll() and removeAll() to find entries regardless of vary keys.
      */
-    @OptIn(ExperimentalEncodingApi::class)
     private fun getUrlCacheKeyPrefix(url: Url): String {
-        return Base64.UrlSafe.encode(url.toString().encodeToByteArray()) + "_"
+        return sha256Hex(url.toString().encodeToByteArray()) + "_"
     }
 
+    private fun sha256Hex(input: ByteArray): String =
+        Buffer().write(input).sha256().hex()
+
     private fun isExpired(timestamp: Long): Boolean {
-        val currentTime = getTimeMillis()
+        val currentTime = clock()
         val elapsed = currentTime - timestamp
         return elapsed > config.ttl
     }

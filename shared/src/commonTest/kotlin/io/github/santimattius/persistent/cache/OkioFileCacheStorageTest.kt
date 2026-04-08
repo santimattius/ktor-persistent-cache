@@ -304,5 +304,38 @@ class OkioFileCacheStorageTest {
         )
     }
 
+    @Test
+    fun `given a url with 676 characters when stored and retrieved then no filename length error occurs`() =
+        runTest {
+            // Given - Reproduces the real-world crash: a 676-char URL with many query params.
+            // Base64 would expand this to ~904 chars, exceeding the OS filename limit (~255).
+            // SHA-256 always produces a 64-char hex key, so the total filename is ~79 chars.
+            val queryParams = (1..30).joinToString("&") { "param${it}=value${it}_with_extra_data" }
+            val longUrl = Url("https://api.example.com/v1/endpoint/resource?$queryParams")
+            assertTrue(
+                longUrl.toString().length > 255,
+                "URL must be longer than 255 chars to reproduce the issue (was ${longUrl.toString().length})"
+            )
+            val cachedResponse = TestDataFactory.createCachedResponse(
+                url = longUrl.toString(),
+                body = "response for long url"
+            )
+
+            // When
+            storage.store(longUrl, cachedResponse)
+
+            // Then - file name must fit within OS limits and the entry must be retrievable
+            val cacheFiles = fakeFileSystem.getAllFiles().filter { it.name.endsWith(".cache") }
+            assertEquals(1, cacheFiles.size, "Should have created exactly one cache file")
+            assertTrue(
+                cacheFiles.first().name.length <= 255,
+                "Cache file name must not exceed 255 characters (was ${cacheFiles.first().name.length})"
+            )
+
+            val retrieved = storage.find(longUrl, emptyMap())
+            assertNotNull(retrieved, "Response for long URL must be retrievable")
+            assertEquals("response for long url", retrieved.body.decodeToString())
+        }
+
     private fun String.toOkioPath(): okio.Path = this.toPath()
 }
