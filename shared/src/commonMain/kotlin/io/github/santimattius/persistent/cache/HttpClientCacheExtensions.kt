@@ -7,7 +7,7 @@ import io.ktor.client.plugins.cache.storage.CacheStorage
 /**
  * Installs persistent file-based HTTP caching on this client using [HttpCache].
  *
- * When [CacheConfig.enabled] is true, responses are stored on disk via [OkioFileCacheStorage]
+ * When [CacheConfig.enabled] is true, responses are stored on disk via [CacheStorageFactory]
  * under the directory supplied by [cacheDirectoryProvider], respecting [CacheConfig.maxCacheSize]
  * and [CacheConfig.cacheTtl]. When false, the cache plugin is still installed but uses
  * [CacheStorage.Disabled], so no storage is used.
@@ -24,14 +24,7 @@ fun HttpClientConfig<*>.installPersistentCache(
     cacheDirectoryProvider: CacheDirectoryProvider = getCacheDirectoryProvider()
 ) {
     val storage = if (config.enabled) {
-        OkioFileCacheStorage(
-            config = OkioFileCacheConfig(
-                fileName = config.cacheDirectory,
-                maxSize = config.maxCacheSize,
-                ttl = config.cacheTtl,
-                cacheDirectoryProvider = cacheDirectoryProvider
-            )
-        )
+        CacheStorageFactory.create(config, cacheDirectoryProvider = cacheDirectoryProvider)
     } else {
         CacheStorage.Disabled
     }

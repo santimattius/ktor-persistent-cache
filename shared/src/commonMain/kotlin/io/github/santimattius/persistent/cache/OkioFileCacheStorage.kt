@@ -10,11 +10,11 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoBuf
+import okio.Buffer
 import okio.FileSystem
 import okio.Path
 import okio.SYSTEM
 import kotlin.coroutines.cancellation.CancellationException
-import okio.Buffer
 
 /**
  * A [CacheStorage] implementation that stores cached responses on the filesystem using Okio.
@@ -262,7 +262,10 @@ internal class OkioFileCacheStorage(
                         CacheFileInfo(file, size, cacheEntry.timestamp, lastModified)
                     } catch (_: Exception) {
                         // Delete corrupted files
-                        try { fileSystem.delete(file) } catch (_: Exception) { }
+                        try {
+                            fileSystem.delete(file)
+                        } catch (_: Exception) {
+                        }
                         null
                     }
                 }
@@ -285,9 +288,8 @@ internal class OkioFileCacheStorage(
                     fileSystem.delete(fileInfo.path)
                 }
             }
-        } catch (e: Exception) {
-            // Log error or handle it appropriately
-            println("Failed to cleanup cache: ${e.message}")
+        } catch (_: Exception) {
+            // Best-effort cleanup; failures are ignored to avoid breaking cache reads/writes.
         }
     }
 }
