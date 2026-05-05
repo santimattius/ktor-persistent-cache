@@ -21,6 +21,8 @@ configurable size limits, TTL, and platform-appropriate cache directories.
   you configure cache storage and options in one place.
 - **Configurable** — TTL (time-to-live), max cache size, directory name, shared vs unshared, and
   public vs private storage.
+- **Shared API surface** — [CacheStorageConfig] models directory name, max size, and TTL;
+  [CacheStorageFactory] builds Ktor [Cache Storage](https://ktor.io/docs/client-caching.html) (`CacheStorage`) with Okio persistence — the same backing store **[installPersistentCache]** uses when `enabled` is true.
 - **Content negotiation** — Respects `Vary` headers so different variants (e.g. by
   `Accept-Language`) are cached separately.
 - **LRU eviction** — When the cache exceeds the configured size, least-recently-used entries are
@@ -29,6 +31,10 @@ configurable size limits, TTL, and platform-appropriate cache directories.
   for tests or special directories).
 
 [CacheDirectoryProvider]: #custom-cache-directory
+
+[CacheStorageConfig]: shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheStorageConfig.kt  
+[CacheStorageFactory]: shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheStorageFactory.kt  
+[installPersistentCache]: #quick-start
 
 ---
 
@@ -188,6 +194,46 @@ CacheConfig(enabled = true, cacheDirectory = "my_cache")
 ```
 
 [CacheConfig]: shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheConfig.kt
+
+---
+
+## Shared configuration and CacheStorageFactory
+
+[CacheStorageConfig](shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheStorageConfig.kt)
+covers only persisted disk knobs: subdirectory name under the platform (or custom) cache root,
+maximum size in bytes, and TTL in milliseconds.
+
+[CacheConfig](shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheConfig.kt)
+implements that shape and adds `enabled`, `isShared`, and `isPublic`, which **`installPersistentCache`**
+respects alongside [HttpCache](https://ktor.io/docs/client-caching.html).
+
+[CacheStorageFactory](shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheStorageFactory.kt)
+produces Okio-backed `CacheStorage`. With **`enabled == true`**, **`installPersistentCache`** delegates here;
+you can call the factory directly when configuring [HttpCache](https://ktor.io/docs/client-caching.html) yourself—for example with a fake
+filesystem or deterministic clock in tests:
+
+```kotlin
+val storage = CacheStorageFactory.create(
+    config = CacheConfig(
+        enabled = true, // Ignored by the factory; use installPersistentCache to honor `enabled`
+        cacheDirectory = "http_cache",
+        maxCacheSize = 10L * 1024 * 1024,
+        cacheTtl = 60 * 60 * 1000,
+    ),
+    cacheDirectoryProvider = getCacheDirectoryProvider()
+)
+
+HttpClient(CIO) {
+    install(HttpCache) {
+        isShared = true
+        privateStorage(storage)
+    }
+}
+```
+
+**Important:** Only **`installPersistentCache`** maps `CacheConfig.enabled == false` to `CacheStorage.Disabled`.
+If you bypass it and always call **`CacheStorageFactory.create`**, you construct disk storage explicitly;
+pair with your own **`HttpCache`** setup (or omit the plugin if you don’t want HTTP caching behavior).
 
 ---
 

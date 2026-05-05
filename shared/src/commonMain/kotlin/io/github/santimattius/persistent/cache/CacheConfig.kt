@@ -16,12 +16,12 @@ package io.github.santimattius.persistent.cache
  */
 data class CacheConfig(
     val enabled: Boolean = false,
-    val cacheDirectory: String = "http_cache",
-    val maxCacheSize: Long = 10L * 1024 * 1024, // 10 MB
-    val cacheTtl: Long = 60 * 60 * 1000, // 1 hour
+    override val cacheDirectory: String = "http_cache",
+    override val maxCacheSize: Long = 10L * 1024 * 1024, // 10 MB
+    override val cacheTtl: Long = 60 * 60 * 1000, // 1 hour
     val isShared: Boolean = true,
     val isPublic: Boolean = false
-) {
+) : CacheStorageConfig {
     /**
      * Creates a [CacheConfig] with only [enabled] and [cacheDirectory];
      * other properties use their defaults.
