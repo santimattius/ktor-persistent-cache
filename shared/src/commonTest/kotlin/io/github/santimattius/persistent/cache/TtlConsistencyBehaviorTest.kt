@@ -250,8 +250,8 @@ class TtlConsistencyBehaviorTest {
     }
 
     @Test
-    fun `given zero ttl config when entry stored then immediately expires`() = runTest {
-        // Given - TTL of 0 means immediate expiration
+    fun `given zero ttl config when entry stored then never expires`() = runTest {
+        // Given - TTL of 0 means "never expires" (mirrors maxSize <= 0 = unlimited)
         val clock = TestClock()
         val config = OkioFileCacheConfig(
             fileName = "http_cache",
@@ -264,14 +264,14 @@ class TtlConsistencyBehaviorTest {
         val url = Url("https://api.example.com/data")
         storage.store(url, TestDataFactory.createCachedResponse(url = url.toString()))
 
-        // Advance clock by 1ms so elapsed > ttl (0)
-        clock.advance(1)
+        // Advance clock well past any realistic window
+        clock.advance(10_000_000)
 
         // When
         val result = storage.find(url, emptyMap())
 
-        // Then - Should be expired immediately
-        assertNull(result, "Entry with zero TTL should be expired immediately")
+        // Then - Should never expire
+        assertNotNull(result, "Entry with zero TTL should never expire")
     }
 
     private fun String.toOkioPath(): okio.Path = this.toPath()

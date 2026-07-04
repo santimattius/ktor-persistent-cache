@@ -65,10 +65,13 @@ private var applicationContext: Context? = null
  * It performs a check using [canLeakMemory] to ensure that the provided context is not one that
  * could cause memory leaks if stored statically (e.g., an Activity context).
  *
+ * Public so external modules can call it manually when AndroidX Startup's automatic
+ * [ContextInitializer] does not run (e.g. it was disabled in the manifest).
+ *
  * @param context The [Context] to be used as the application context.
  * @throws IllegalArgumentException if the provided context is deemed prone to memory leaks.
  */
-internal fun injectContext(context: Context) {
+fun injectContext(context: Context) {
     require(!context.canLeakMemory()) { "The passed $context would leak memory!" }
     applicationContext = context
 }
