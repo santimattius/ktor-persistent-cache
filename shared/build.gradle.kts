@@ -59,7 +59,7 @@ mavenPublishing {
     // Maven Central: uncomment and configure credentials (see docs/PUBLISHING.md)
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.santimattius", "ktor-persistent-cache", "1.1.0")
+    coordinates("io.github.santimattius", "ktor-persistent-cache", "1.2.0")
     pom {
         name.set("Ktor Persistent Cache")
         description.set("Kotlin Multiplatform library for persistent HTTP caching with Ktor and Okio. Supports Android and iOS.")
