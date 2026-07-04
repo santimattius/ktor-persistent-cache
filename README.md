@@ -121,12 +121,14 @@ If you **don’t** use the library’s manifest (e.g. you use a different DI or 
 call **once** at app startup with the **application context** (not an Activity context):
 
 ```kotlin
+import io.github.santimattius.persistent.cache.startup.injectContext
+
 // e.g. in Application.onCreate()
 injectContext(applicationContext)
 ```
 
-`injectContext` is provided by the library package
-`io.github.santimattius.persistent.cache.startup`.
+`injectContext` is a **public** API in `io.github.santimattius.persistent.cache.startup`. It throws
+`IllegalArgumentException` if you pass a context that can leak memory (for example an Activity).
 
 ### iOS
 
@@ -164,6 +166,12 @@ val client = HttpClient(CIO) {
 2. Use the client as usual. The cache stores responses for requests that support caching and serves
    them when valid.
 
+   **Cross-restart persistence** depends on the **origin server's** cacheability headers per
+   [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234) (for example `Cache-Control: max-age=…` or
+   `Expires`). This library persists whatever Ktor's [HttpCache](https://ktor.io/docs/client-caching.html)
+   plugin stores; it does not override freshness rules. Responses marked `no-store` are not written
+   to disk.
+
 ```kotlin
 val response: String = client.get("https://example.com/api/data").body()
 ```
@@ -182,7 +190,7 @@ val response: String = client.get("https://example.com/api/data").body()
 | `enabled`        | `Boolean` | `false`        | Whether the HTTP cache is enabled.                                                                                          |
 | `cacheDirectory` | `String`  | `"http_cache"` | Name of the cache directory under the platform cache root.                                                                  |
 | `maxCacheSize`   | `Long`    | 10 MB          | Maximum cache size in bytes. LRU eviction when exceeded. Use `0` for no limit.                                              |
-| `cacheTtl`       | `Long`    | 1 hour         | Time-to-live for entries in milliseconds.                                                                                   |
+| `cacheTtl`       | `Long`    | 1 hour         | Time-to-live for entries in milliseconds. Values `<= 0` mean entries **never expire** (same convention as `maxCacheSize <= 0` = unlimited). |
 | `isShared`       | `Boolean` | `true`         | Whether the cache is shared across requests (Ktor [HttpCache](https://ktor.io/docs/client-caching.html) behavior).          |
 | `isPublic`       | `Boolean` | `false`        | When `true`, cached responses are treated as public (shareable across users); when `false`, they are private to the client. |
 
@@ -194,6 +202,23 @@ CacheConfig(enabled = true, cacheDirectory = "my_cache")
 ```
 
 [CacheConfig]: shared/src/commonMain/kotlin/io/github/santimattius/persistent/cache/CacheConfig.kt
+
+### Auth plugin + persistent cache
+
+This library installs Ktor's [HttpCache](https://ktor.io/docs/client-caching.html) and does **not**
+intercept the Auth pipeline. When you also install [Auth](https://ktor.io/docs/client-auth.html),
+behavior follows Ktor's cache routing:
+
+- Authenticated responses need **`Cache-Control: private`** (for example `private, max-age=3600`) to
+  be stored in **private** storage — the Okio-backed store configured by `installPersistentCache`
+  when `isPublic = false`. Responses with only `max-age` (no `private`) route to Ktor's default
+  public storage, which this helper does not configure.
+- Set **`isShared = false`** on [CacheConfig] when using Bearer (or other) auth on the same client.
+  Ktor skips cache lookup for authorized requests on a shared client and refuses to store private
+  entries when `isShared = true`.
+
+These rules are verified by `AuthPluginInteropTest` in the test suite. No extra configuration is
+required beyond matching server cache headers and the `CacheConfig` flags above.
 
 ---
 
