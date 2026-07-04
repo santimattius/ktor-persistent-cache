@@ -6,6 +6,7 @@ package io.github.santimattius.persistent.cache
  * @property fileName The base name for the cache directory.
  * @property maxSize The maximum size of the cache in bytes.
  * @property ttl The time-to-live for cache entries in milliseconds.
+ *   A value `<= 0` means entries never expire (mirrors `maxSize <= 0` = unlimited).
  * @property cacheDirectoryProvider The provider for the cache directory. If not provided, a default one will be used.
  */
 internal data class OkioFileCacheConfig(

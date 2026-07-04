@@ -232,6 +232,7 @@ internal class OkioFileCacheStorage(
         Buffer().write(input).sha256().hex()
 
     private fun isExpired(timestamp: Long): Boolean {
+        if (config.ttl <= 0) return false // ttl <= 0 means "never expires" (mirrors maxSize <= 0 = unlimited)
         val currentTime = clock()
         val elapsed = currentTime - timestamp
         return elapsed > config.ttl

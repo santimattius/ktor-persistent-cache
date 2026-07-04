@@ -10,6 +10,7 @@ package io.github.santimattius.persistent.cache
  * @property cacheDirectory Custom cache directory name (default: "http_cache").
  * @property maxCacheSize Maximum cache size in bytes (default: 10MB).
  * @property cacheTtl Time-to-live for cache entries in milliseconds (default: 1 hour).
+ *   A value `<= 0` means entries never expire.
  * @property isShared Whether the cache is shared across requests (default: true).
  * @property isPublic Whether cached responses are considered public (default: false).
  *   When true, responses may be shared across users; when false, they are private to the client.
