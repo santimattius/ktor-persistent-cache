@@ -6,6 +6,7 @@
 [![Android](https://img.shields.io/badge/Android-AGP%209.0-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
 [![iOS](https://img.shields.io/badge/iOS-Supported-8E8E93?logo=apple&logoColor=white)](https://developer.apple.com)
 [![JVM](https://img.shields.io/badge/JVM-Supported-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
 A **Kotlin Multiplatform** library that adds **persistent HTTP caching** to [Ktor](https://ktor.io)
 HttpClient. Responses are stored on disk using [Okio](https://github.com/square/okio), with
