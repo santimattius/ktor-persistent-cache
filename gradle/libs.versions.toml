@@ -15,7 +15,7 @@ androidx-appcompat = "1.7.1"
 androidx-core = "1.17.0"
 
 ktorVersion = "3.5.1"
-okio = "3.17.0"
+okio = "3.18.1"
 kotlinxSerializationJson = "1.11.0"
 kotlinxSerializationProtobuf = "1.11.0"
 kotlinxCoroutines = "1.11.0"
