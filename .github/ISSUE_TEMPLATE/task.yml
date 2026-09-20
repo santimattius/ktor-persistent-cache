@@ -1,0 +1,27 @@
+name: Task / Improvement
+description: Track a piece of work, refactor, or enhancement for this repository.
+title: "[Task]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is this task about?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / Why
+      description: Why is this needed? Link related issues, discussions, or docs.
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this task to be considered done?
+      render: markdown
+    validations:
+      required: false
