@@ -15,6 +15,15 @@ package io.github.santimattius.persistent.cache
  * @property isPublic Whether cached responses are considered public (default: false).
  *   When true, responses may be shared across users; when false, they are private to the client.
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
+        "instead. See docs/MIGRATION.md.",
+    replaceWith = ReplaceWith(
+        "PersistentCacheConfig",
+        "io.github.santimattius.persistent.cache.PersistentCacheConfig"
+    )
+)
 data class CacheConfig(
     val enabled: Boolean = false,
     override val cacheDirectory: String = "http_cache",

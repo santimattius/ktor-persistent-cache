@@ -8,7 +8,8 @@ import io.ktor.client.plugins.cache.storage.CacheStorage
  * Installs persistent file-based HTTP caching on this client using [HttpCache].
  *
  * When [CacheConfig.enabled] is true, responses are stored on disk via [CacheStorageFactory]
- * under the directory supplied by [cacheDirectoryProvider], respecting [CacheConfig.maxCacheSize]
+ * (delegating to `cache-core` + `cache-okio`, design decision #6, Engram #1505) under the
+ * directory supplied by [cacheDirectoryProvider], respecting [CacheConfig.maxCacheSize]
  * and [CacheConfig.cacheTtl]. When false, the cache plugin is still installed but uses
  * [CacheStorage.Disabled], so no storage is used.
  *
@@ -19,6 +20,15 @@ import io.ktor.client.plugins.cache.storage.CacheStorage
  * @param cacheDirectoryProvider Supplies the root directory for the cache. Defaults to the
  *   platform-specific provider from [getCacheDirectoryProvider]; override for custom paths or tests.
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
+        "instead. See docs/MIGRATION.md.",
+    replaceWith = ReplaceWith(
+        "install(PersistentCache) { }",
+        "io.github.santimattius.persistent.cache.PersistentCache"
+    )
+)
 fun HttpClientConfig<*>.installPersistentCache(
     config: CacheConfig,
     cacheDirectoryProvider: CacheDirectoryProvider = getCacheDirectoryProvider()
