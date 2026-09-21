@@ -6,12 +6,11 @@ plugins {
     alias(libs.plugins.androidKMPLibrary)
     alias(libs.plugins.mavenPublish)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.binaryCompatibilityValidator)
 }
 
 kotlin {
     androidLibrary {
-        namespace = "io.github.santimattius.persistent.cache"
+        namespace = "cache.core"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
@@ -26,7 +25,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "KtorPersistentCache"
+            baseName = "KtorPersistentCacheCore"
             isStatic = true
         }
     }
@@ -38,17 +37,19 @@ kotlin {
             implementation(libs.androidx.startup.runtime)
         }
         commonMain.dependencies {
-            // put your Multiplatform dependencies here
+            // cache-core intentionally has ZERO Okio / kotlinx-io dependencies.
+            // Ktor client core is the framework being extended, not a backend I/O dependency.
             implementation(libs.ktor.client.core)
-            implementation(libs.okio)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.serialization.protobuf)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
-            implementation(libs.ktor.client.mock)
-            implementation(libs.ktor.client.auth)
+            implementation(projects.cacheTestSuite)
+            // Test-only cross-check against Okio's SHA-256, until Phase 2 relocates this
+            // test to cache-okio/commonTest (where Okio is a real backend dependency).
+            implementation(libs.okio)
         }
     }
 }
@@ -57,13 +58,12 @@ kotlin {
 // https://github.com/vanniktech/gradle-maven-publish-plugin
 // Supports com.android.kotlin.multiplatform.library out of the box.
 mavenPublishing {
-    // Maven Central: uncomment and configure credentials (see docs/PUBLISHING.md)
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.santimattius", "ktor-persistent-cache", "1.2.0")
+    coordinates("io.github.santimattius", "ktor-persistent-cache-core", "1.2.0")
     pom {
-        name.set("Ktor Persistent Cache")
-        description.set("Kotlin Multiplatform library for persistent HTTP caching with Ktor and Okio. Supports Android and iOS.")
+        name.set("Ktor Persistent Cache - Core")
+        description.set("Backend-independent algorithm and SPI for Ktor Persistent Cache. Zero Okio/kotlinx-io dependencies.")
         inceptionYear.set("2026")
         url.set("https://github.com/santimattius/ktor-persistent-cache/")
         licenses {
@@ -86,5 +86,4 @@ mavenPublishing {
             developerConnection.set("scm:git:ssh://git@github.com/santimattius/ktor-persistent-cache.git")
         }
     }
-
 }

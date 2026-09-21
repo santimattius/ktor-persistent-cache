@@ -1,0 +1,66 @@
+public final class io/github/santimattius/persistent/cache/CacheConfig : io/github/santimattius/persistent/cache/CacheStorageConfig {
+	public fun <init> ()V
+	public fun <init> (ZLjava/lang/String;)V
+	public fun <init> (ZLjava/lang/String;JJZZ)V
+	public synthetic fun <init> (ZLjava/lang/String;JJZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()J
+	public final fun component4 ()J
+	public final fun component5 ()Z
+	public final fun component6 ()Z
+	public final fun copy (ZLjava/lang/String;JJZZ)Lio/github/santimattius/persistent/cache/CacheConfig;
+	public static synthetic fun copy$default (Lio/github/santimattius/persistent/cache/CacheConfig;ZLjava/lang/String;JJZZILjava/lang/Object;)Lio/github/santimattius/persistent/cache/CacheConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getCacheDirectory ()Ljava/lang/String;
+	public fun getCacheTtl ()J
+	public final fun getEnabled ()Z
+	public fun getMaxCacheSize ()J
+	public fun hashCode ()I
+	public final fun isPublic ()Z
+	public final fun isShared ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/github/santimattius/persistent/cache/CacheDirectoryProvider {
+	public abstract fun getCacheDirectory ()Lokio/Path;
+}
+
+public final class io/github/santimattius/persistent/cache/CacheDirectoryProvider_jvmKt {
+	public static final fun getCacheDirectoryProvider ()Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;
+}
+
+public abstract interface class io/github/santimattius/persistent/cache/CacheStorageConfig {
+	public static final field Companion Lio/github/santimattius/persistent/cache/CacheStorageConfig$Companion;
+	public fun getCacheDirectory ()Ljava/lang/String;
+	public fun getCacheTtl ()J
+	public fun getMaxCacheSize ()J
+}
+
+public final class io/github/santimattius/persistent/cache/CacheStorageConfig$Companion {
+	public final fun default (Ljava/lang/String;JJ)Lio/github/santimattius/persistent/cache/CacheStorageConfig;
+	public static synthetic fun default$default (Lio/github/santimattius/persistent/cache/CacheStorageConfig$Companion;Ljava/lang/String;JJILjava/lang/Object;)Lio/github/santimattius/persistent/cache/CacheStorageConfig;
+}
+
+public final class io/github/santimattius/persistent/cache/CacheStorageConfig$DefaultImpls {
+	public static fun getCacheDirectory (Lio/github/santimattius/persistent/cache/CacheStorageConfig;)Ljava/lang/String;
+	public static fun getCacheTtl (Lio/github/santimattius/persistent/cache/CacheStorageConfig;)J
+	public static fun getMaxCacheSize (Lio/github/santimattius/persistent/cache/CacheStorageConfig;)J
+}
+
+public final class io/github/santimattius/persistent/cache/CacheStorageException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class io/github/santimattius/persistent/cache/CacheStorageFactory {
+	public static final field INSTANCE Lio/github/santimattius/persistent/cache/CacheStorageFactory;
+	public final fun create (Lio/github/santimattius/persistent/cache/CacheConfig;Lokio/FileSystem;Lkotlin/jvm/functions/Function0;Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;)Lio/ktor/client/plugins/cache/storage/CacheStorage;
+	public static synthetic fun create$default (Lio/github/santimattius/persistent/cache/CacheStorageFactory;Lio/github/santimattius/persistent/cache/CacheConfig;Lokio/FileSystem;Lkotlin/jvm/functions/Function0;Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;ILjava/lang/Object;)Lio/ktor/client/plugins/cache/storage/CacheStorage;
+}
+
+public final class io/github/santimattius/persistent/cache/HttpClientCacheExtensionsKt {
+	public static final fun installPersistentCache (Lio/ktor/client/HttpClientConfig;Lio/github/santimattius/persistent/cache/CacheConfig;Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;)V
+	public static synthetic fun installPersistentCache$default (Lio/ktor/client/HttpClientConfig;Lio/github/santimattius/persistent/cache/CacheConfig;Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;ILjava/lang/Object;)V
+}
+
