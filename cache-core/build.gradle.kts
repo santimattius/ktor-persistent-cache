@@ -1,11 +1,13 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import kotlinx.validation.ExperimentalBCVApi
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKMPLibrary)
     alias(libs.plugins.mavenPublish)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.binaryCompatibilityValidator)
 }
 
 kotlin {
@@ -51,6 +53,20 @@ kotlin {
             // test to cache-okio/commonTest (where Okio is a real backend dependency).
             implementation(libs.okio)
         }
+    }
+}
+
+// Task 4.5 trial: klib (iOS) ABI validation, enabled on this module only. Confirmed on this
+// macOS host (matching CI's macOS-latest runner): `klibApiDump`/`klibApiCheck` run cleanly and
+// reproducibly (identical output across two consecutive dumps) for iosArm64/iosSimulatorArm64/
+// iosX64, and `klibApiCheck` genuinely fails when the committed `cache-core.klib.api` is
+// corrupted — see apply-progress for the corrupt/restore evidence. Kept scoped to this one
+// module per the design's fallback stance (Engram #1505); not rolled out to shared/okio/
+// kotlinx-io in this batch.
+@OptIn(ExperimentalBCVApi::class)
+apiValidation {
+    klib {
+        enabled = true
     }
 }
 

@@ -1,0 +1,75 @@
+public abstract interface class io/github/santimattius/persistent/cache/CacheDirectoryProvider {
+	public abstract fun getCacheDirectory ()Ljava/lang/String;
+}
+
+public final class io/github/santimattius/persistent/cache/CacheDirectoryProvider_jvmKt {
+	public static final fun getCacheDirectoryProvider ()Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;
+}
+
+public final class io/github/santimattius/persistent/cache/CacheFileMetadata {
+	public fun <init> (Ljava/lang/Long;Ljava/lang/Long;)V
+	public final fun component1 ()Ljava/lang/Long;
+	public final fun component2 ()Ljava/lang/Long;
+	public final fun copy (Ljava/lang/Long;Ljava/lang/Long;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public static synthetic fun copy$default (Lio/github/santimattius/persistent/cache/CacheFileMetadata;Ljava/lang/Long;Ljava/lang/Long;ILjava/lang/Object;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLastModifiedAtMillis ()Ljava/lang/Long;
+	public final fun getSize ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/github/santimattius/persistent/cache/CacheFileSystem {
+	public abstract fun createDirectories (Ljava/lang/Object;)V
+	public abstract fun delete (Ljava/lang/Object;)V
+	public abstract fun exists (Ljava/lang/Object;)Z
+	public abstract fun list (Ljava/lang/Object;)Ljava/util/List;
+	public abstract fun metadata (Ljava/lang/Object;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public abstract fun name (Ljava/lang/Object;)Ljava/lang/String;
+	public abstract fun read (Ljava/lang/Object;)[B
+	public abstract fun resolve (Ljava/lang/String;[Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun write (Ljava/lang/Object;[B)V
+}
+
+public final class io/github/santimattius/persistent/cache/CacheStorageException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class io/github/santimattius/persistent/cache/FileCacheStorage : io/ktor/client/plugins/cache/storage/CacheStorage {
+	public fun <init> (Lio/github/santimattius/persistent/cache/CacheFileSystem;Ljava/lang/String;Ljava/lang/String;JJLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Lio/github/santimattius/persistent/cache/CacheFileSystem;Ljava/lang/String;Ljava/lang/String;JJLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun find (Lio/ktor/http/Url;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun findAll (Lio/ktor/http/Url;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun remove (Lio/ktor/http/Url;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun removeAll (Lio/ktor/http/Url;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun store (Lio/ktor/http/Url;Lio/ktor/client/plugins/cache/storage/CachedResponseData;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface annotation class io/github/santimattius/persistent/cache/InternalPersistentCacheApi : java/lang/annotation/Annotation {
+}
+
+public final class io/github/santimattius/persistent/cache/PersistentCacheConfig {
+	public fun <init> ()V
+	public final fun getClock ()Lkotlin/jvm/functions/Function0;
+	public final fun getDirectory ()Ljava/lang/String;
+	public final fun getDirectoryProvider ()Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;
+	public final fun getFileSystem ()Lio/github/santimattius/persistent/cache/CacheFileSystem;
+	public final fun getMaxSize ()J
+	public final fun getPublic ()Z
+	public final fun getShared ()Z
+	public final fun getTtl ()J
+	public final fun setClock (Lkotlin/jvm/functions/Function0;)V
+	public final fun setDirectory (Ljava/lang/String;)V
+	public final fun setDirectoryProvider (Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;)V
+	public final fun setFileSystem (Lio/github/santimattius/persistent/cache/CacheFileSystem;)V
+	public final fun setMaxSize (J)V
+	public final fun setPublic (Z)V
+	public final fun setShared (Z)V
+	public final fun setTtl (J)V
+}
+
+public final class io/github/santimattius/persistent/cache/PersistentCacheKt {
+	public static final fun getPersistentCache ()Lio/ktor/client/plugins/api/ClientPlugin;
+}
+

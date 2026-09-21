@@ -1,0 +1,27 @@
+public abstract interface annotation class io/github/santimattius/persistent/cache/ExperimentalKotlinxIoCache : java/lang/annotation/Annotation {
+}
+
+public final class io/github/santimattius/persistent/cache/KotlinxIoCacheFileSystem : io/github/santimattius/persistent/cache/CacheFileSystem {
+	public fun <init> ()V
+	public fun <init> (Lkotlinx/io/files/FileSystem;)V
+	public synthetic fun <init> (Lkotlinx/io/files/FileSystem;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun createDirectories (Ljava/lang/Object;)V
+	public fun createDirectories (Lkotlinx/io/files/Path;)V
+	public synthetic fun delete (Ljava/lang/Object;)V
+	public fun delete (Lkotlinx/io/files/Path;)V
+	public synthetic fun exists (Ljava/lang/Object;)Z
+	public fun exists (Lkotlinx/io/files/Path;)Z
+	public synthetic fun list (Ljava/lang/Object;)Ljava/util/List;
+	public fun list (Lkotlinx/io/files/Path;)Ljava/util/List;
+	public synthetic fun metadata (Ljava/lang/Object;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public fun metadata (Lkotlinx/io/files/Path;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public synthetic fun name (Ljava/lang/Object;)Ljava/lang/String;
+	public fun name (Lkotlinx/io/files/Path;)Ljava/lang/String;
+	public synthetic fun read (Ljava/lang/Object;)[B
+	public fun read (Lkotlinx/io/files/Path;)[B
+	public synthetic fun resolve (Ljava/lang/String;[Ljava/lang/String;)Ljava/lang/Object;
+	public fun resolve (Ljava/lang/String;[Ljava/lang/String;)Lkotlinx/io/files/Path;
+	public synthetic fun write (Ljava/lang/Object;[B)V
+	public fun write (Lkotlinx/io/files/Path;[B)V
+}
+
