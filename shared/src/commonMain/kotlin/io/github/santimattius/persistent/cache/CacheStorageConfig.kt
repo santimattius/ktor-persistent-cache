@@ -4,6 +4,14 @@ package io.github.santimattius.persistent.cache
  * Shared shape for persistent HTTP cache limits: subdirectory name under the cache root,
  * maximum on-disk size, and entry TTL. Used by [CacheConfig] and [CacheStorageFactory].
  */
+@Deprecated(
+    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
+        "instead. See docs/MIGRATION.md.",
+    replaceWith = ReplaceWith(
+        "PersistentCacheConfig",
+        "io.github.santimattius.persistent.cache.PersistentCacheConfig"
+    )
+)
 interface CacheStorageConfig {
     /**
      * The name of the directory where the cache will be stored (under the provider root).
@@ -31,6 +39,7 @@ interface CacheStorageConfig {
          * @param maxCacheSize The maximum size of the cache in bytes.
          * @param cacheTtl The time-to-live for cached entries in milliseconds.
          */
+        @Suppress("DEPRECATION")
         fun default(
             cacheDirectory: String = "http_cache",
             maxCacheSize: Long = 10L * 1024 * 1024, // 10 MB

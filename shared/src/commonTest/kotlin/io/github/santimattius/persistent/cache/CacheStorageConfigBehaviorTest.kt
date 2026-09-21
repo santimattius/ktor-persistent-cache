@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package io.github.santimattius.persistent.cache
 
 import kotlin.test.Test
@@ -5,6 +7,9 @@ import kotlin.test.assertEquals
 
 /**
  * Behavioral tests for [CacheStorageConfig] and its relationship with [CacheConfig].
+ *
+ * Kept per task 2.8 (Engram #1507) as a facade regression gate: both types are now
+ * `@Deprecated` (task 2.6), exercised here with `@Suppress("DEPRECATION")`.
  */
 class CacheStorageConfigBehaviorTest {
 
