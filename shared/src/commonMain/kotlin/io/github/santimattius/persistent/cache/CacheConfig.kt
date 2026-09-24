@@ -17,10 +17,13 @@ package io.github.santimattius.persistent.cache
  */
 @Suppress("DEPRECATION")
 @Deprecated(
-    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
-        "instead. See docs/MIGRATION.md.",
+    message = "CacheConfig and CacheStorageConfig modeled the same directory/maxSize/ttl fields " +
+        "under two names. PersistentCacheConfig consolidates them into one type configured " +
+        "directly inside install(PersistentCache) { ... }. `enabled` has no field equivalent: " +
+        "omit install(PersistentCache) entirely to disable caching. See docs/MIGRATION.md.",
     replaceWith = ReplaceWith(
-        "PersistentCacheConfig",
+        "PersistentCacheConfig().apply { directory = cacheDirectory; maxSize = maxCacheSize; " +
+            "ttl = cacheTtl; shared = isShared; public = isPublic }",
         "io.github.santimattius.persistent.cache.PersistentCacheConfig"
     )
 )
