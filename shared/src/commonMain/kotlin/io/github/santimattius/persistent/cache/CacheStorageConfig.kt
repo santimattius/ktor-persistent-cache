@@ -5,12 +5,12 @@ package io.github.santimattius.persistent.cache
  * maximum on-disk size, and entry TTL. Used by [CacheConfig] and [CacheStorageFactory].
  */
 @Deprecated(
-    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
-        "instead. See docs/MIGRATION.md.",
-    replaceWith = ReplaceWith(
-        "PersistentCacheConfig",
-        "io.github.santimattius.persistent.cache.PersistentCacheConfig"
-    )
+    message = "CacheStorageConfig existed only so CacheConfig could implement one shared shape " +
+        "for directory/maxSize/ttl. PersistentCacheConfig, configured inside " +
+        "install(PersistentCache) { ... }, replaces both. No automatic replacement is offered " +
+        "here: CacheStorageConfig is used as a supertype/interface, not a constructible " +
+        "expression, so there is no single call site an IDE quick-fix could safely rewrite. " +
+        "See docs/MIGRATION.md for the field-by-field mapping."
 )
 interface CacheStorageConfig {
     /**

@@ -22,11 +22,21 @@ import io.ktor.client.plugins.cache.storage.CacheStorage
  */
 @Suppress("DEPRECATION")
 @Deprecated(
-    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
-        "instead. See docs/MIGRATION.md.",
+    message = "installPersistentCache built CacheConfig into a CacheStorageFactory-backed " +
+        "CacheStorage before installing Ktor's HttpCache. install(PersistentCache) { ... } does " +
+        "the same thing through one client plugin DSL — same algorithm, one type, no field " +
+        "renaming across layers. A backend (e.g. cache-okio's OkioCacheFileSystem) must be " +
+        "assigned to `fileSystem` explicitly, since cache-core ships no default backend; that " +
+        "assignment requires @OptIn(InternalPersistentCacheApi::class) on the enclosing " +
+        "declaration. If `config.enabled` was false, omit install(PersistentCache) entirely " +
+        "instead — there is no direct 'disabled' toggle. See docs/MIGRATION.md.",
     replaceWith = ReplaceWith(
-        "install(PersistentCache) { }",
-        "io.github.santimattius.persistent.cache.PersistentCache"
+        "install(PersistentCache) { directory = config.cacheDirectory; " +
+            "maxSize = config.maxCacheSize; ttl = config.cacheTtl; shared = config.isShared; " +
+            "public = config.isPublic; directoryProvider = cacheDirectoryProvider; " +
+            "fileSystem = OkioCacheFileSystem() }",
+        "io.github.santimattius.persistent.cache.PersistentCache",
+        "io.github.santimattius.persistent.cache.OkioCacheFileSystem"
     )
 )
 fun HttpClientConfig<*>.installPersistentCache(

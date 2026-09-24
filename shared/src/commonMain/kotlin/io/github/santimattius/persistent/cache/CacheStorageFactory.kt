@@ -13,12 +13,12 @@ import okio.SYSTEM
  * which is removed in this PR (task 2.5).
  */
 @Deprecated(
-    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
-        "instead. See docs/MIGRATION.md.",
-    replaceWith = ReplaceWith(
-        "PersistentCacheConfig",
-        "io.github.santimattius.persistent.cache.PersistentCacheConfig"
-    )
+    message = "CacheStorageFactory built a CacheStorage directly from CacheConfig plus an Okio " +
+        "FileSystem. install(PersistentCache) { ... } configures the same FileCacheStorage " +
+        "algorithm (now in :cache-core) through one DSL, so most callers should install the " +
+        "plugin instead of building CacheStorage by hand. No automatic replacement is offered " +
+        "on the object itself — see create()'s own deprecation for a mechanical replacement of " +
+        "the one member that is actually callable. See docs/MIGRATION.md."
 )
 object CacheStorageFactory {
 
@@ -34,6 +34,20 @@ object CacheStorageFactory {
      */
     @Suppress("DEPRECATION")
     @OptIn(InternalPersistentCacheApi::class)
+    @Deprecated(
+        message = "Builds exactly the FileCacheStorage this function always built, just without " +
+            "the CacheConfig/CacheStorageFactory indirection. Prefer install(PersistentCache) " +
+            "{ ... } unless you specifically need a raw CacheStorage to hand to your own " +
+            "HttpCache setup. See docs/MIGRATION.md.",
+        replaceWith = ReplaceWith(
+            "FileCacheStorage(fileSystem = OkioCacheFileSystem(fileSystem), " +
+                "directoryRoot = cacheDirectoryProvider.cacheDirectory, " +
+                "directoryName = config.cacheDirectory, maxSize = config.maxCacheSize, " +
+                "ttl = config.cacheTtl, clock = clock)",
+            "io.github.santimattius.persistent.cache.FileCacheStorage",
+            "io.github.santimattius.persistent.cache.OkioCacheFileSystem"
+        )
+    )
     fun create(
         config: CacheConfig,
         fileSystem: FileSystem = FileSystem.SYSTEM,
