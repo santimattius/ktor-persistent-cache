@@ -1,0 +1,345 @@
+package io.github.santimattius.persistent.cache
+
+import io.ktor.client.plugins.cache.storage.CacheStorage
+import io.ktor.client.plugins.cache.storage.CachedResponseData
+import io.ktor.http.Url
+import io.ktor.util.date.getTimeMillis
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.protobuf.ProtoBuf
+import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * A [CacheStorage] implementation that stores cached responses on the filesystem, generic over
+ * the backend path type [P]. This is the algorithm previously in `OkioFileCacheStorage`
+ * (mutex, key hashing, ProtoBuf [CacheEntry], TTL, LRU cleanup) with every I/O call delegated to
+ * [fileSystem], so it has no dependency on any concrete filesystem library.
+ *
+ * @property fileSystem The backend SPI used for all filesystem operations.
+ * @property directoryRoot The root cache directory (typically from a platform-specific
+ *   `CacheDirectoryProvider`).
+ * @property directoryName The subdirectory name under [directoryRoot] used for this storage's
+ *   cache files.
+ * @property maxSize The maximum size of the cache in bytes. A value `<= 0` means unlimited.
+ * @property ttl The time-to-live for cache entries in milliseconds. A value `<= 0` means entries
+ *   never expire.
+ * @property clock Supplies the current time in milliseconds. Defaults to [getTimeMillis].
+ */
+@InternalPersistentCacheApi
+public class FileCacheStorage<P>(
+    private val fileSystem: CacheFileSystem<P>,
+    private val directoryRoot: String,
+    private val directoryName: String,
+    private val maxSize: Long,
+    private val ttl: Long,
+    private val clock: () -> Long = { getTimeMillis() }
+) : CacheStorage {
+
+    private val cacheDir: P = fileSystem.resolve(directoryRoot, directoryName)
+    private val cacheMutex = Mutex()
+
+    init {
+        // Create cache directory once during initialization.
+        // This is thread-safe as construction happens before the instance is shared.
+        fileSystem.createDirectories(cacheDir)
+    }
+
+    /**
+     * Stores a cached response.
+     *
+     * @param url The URL of the request
+     * @param data The cached response data to store
+     * @throws CacheStorageException if storing fails
+     */
+    override suspend fun store(url: Url, data: CachedResponseData) {
+        cacheMutex.withLock {
+            try {
+                val cacheFile = getCacheFile(url, data.varyKeys)
+                val cacheEntry = CacheEntry(
+                    url = url.toString(),
+                    response = data.makeCopy(),
+                    timestamp = clock()
+                )
+                fileSystem.write(cacheFile, cacheEntry.toByteArray())
+                cleanupCacheInternal()
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (e: Exception) {
+                // Log error or handle it appropriately
+                throw CacheStorageException("Failed to store cache entry", e)
+            }
+        }
+    }
+
+    /**
+     * Looks up a cached response for the given [url] and [varyKeys].
+     * Returns null if not found, expired, or on read error.
+     *
+     * @param url The request URL.
+     * @param varyKeys Vary keys for content negotiation.
+     * @return The cached response, or null.
+     */
+    override suspend fun find(url: Url, varyKeys: Map<String, String>): CachedResponseData? {
+        return cacheMutex.withLock {
+            try {
+                val cacheFile = getCacheFile(url, varyKeys)
+                if (!fileSystem.exists(cacheFile)) return@withLock null
+
+                val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(cacheFile))
+
+                // Check if the cache entry is expired
+                if (isExpired(cacheEntry.timestamp)) {
+                    fileSystem.delete(cacheFile)
+                    return@withLock null
+                }
+
+                cacheEntry.response.restore()
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (_: Exception) {
+                // Log error or handle it appropriately
+                null
+            }
+        }
+    }
+
+    /**
+     * Returns all cached responses for the given [url], for any vary keys.
+     * Expired or corrupted entries are skipped (and removed when expired).
+     *
+     * @param url The request URL.
+     * @return Set of all matching cached responses.
+     */
+    override suspend fun findAll(url: Url): Set<CachedResponseData> {
+        return cacheMutex.withLock {
+            try {
+                val urlPrefix = getUrlCacheKeyPrefix(url)
+                val matchingFiles = fileSystem.list(cacheDir)
+                    .filter { fileSystem.name(it).startsWith(urlPrefix) && fileSystem.name(it).endsWith(".cache") }
+
+                if (matchingFiles.isEmpty()) return@withLock emptySet()
+
+                val results = mutableSetOf<CachedResponseData>()
+                for (file in matchingFiles) {
+                    try {
+                        val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(file))
+
+                        // Check if the cache entry is expired
+                        if (isExpired(cacheEntry.timestamp)) {
+                            fileSystem.delete(file)
+                        } else {
+                            results.add(cacheEntry.response.restore())
+                        }
+                    } catch (ex: CancellationException) {
+                        throw ex
+                    } catch (_: Exception) {
+                        // Skip corrupted entries
+                    }
+                }
+                results
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (_: Exception) {
+                // Log error or handle it appropriately
+                emptySet()
+            }
+        }
+    }
+
+    /**
+     * Removes a cached response.
+     *
+     * @param url The URL of the request
+     * @param varyKeys The vary keys for cache lookup
+     * @throws CacheStorageException if removal fails
+     */
+    override suspend fun remove(url: Url, varyKeys: Map<String, String>) {
+        cacheMutex.withLock {
+            try {
+                val cacheFile = getCacheFile(url, varyKeys)
+                if (fileSystem.exists(cacheFile)) {
+                    fileSystem.delete(cacheFile)
+                }
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (e: Exception) {
+                // Log error or handle it appropriately
+                throw CacheStorageException("Failed to remove cache entry", e)
+            }
+        }
+    }
+
+    /**
+     * Removes all cached responses for a URL (regardless of vary keys).
+     *
+     * @param url The URL of the request
+     * @throws CacheStorageException if removal fails
+     */
+    override suspend fun removeAll(url: Url) {
+        cacheMutex.withLock {
+            try {
+                val urlPrefix = getUrlCacheKeyPrefix(url)
+                val matchingFiles = fileSystem.list(cacheDir)
+                    .filter { fileSystem.name(it).startsWith(urlPrefix) && fileSystem.name(it).endsWith(".cache") }
+
+                for (file in matchingFiles) {
+                    fileSystem.delete(file)
+                }
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (e: Exception) {
+                // Log error or handle it appropriately
+                throw CacheStorageException("Failed to remove cache entries", e)
+            }
+        }
+    }
+
+    /**
+     * Generates the cache file path for a URL with optional vary keys.
+     * Uses SHA-256 hashing to produce a fixed-length (64 hex chars) filename component,
+     * avoiding filesystem limits on file name length regardless of URL length.
+     *
+     * File naming scheme: {urlHash}_{varyKeysHash}.cache
+     * - urlHash: SHA-256 hex digest of the URL string (always 64 chars)
+     * - varyKeysHash: Hash of sorted vary keys (or "0" if empty)
+     *
+     * This scheme allows prefix matching for findAll/removeAll operations.
+     *
+     * @param url The request URL
+     * @param varyKeys Optional vary keys for content negotiation differentiation
+     * @return The cache file path
+     */
+    private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): P {
+        val urlKey = Sha256.hex(url.toString().encodeToByteArray())
+        val varyKeysHash = if (varyKeys.isEmpty()) {
+            "0"
+        } else {
+            val varyKeysString = varyKeys.entries
+                .sortedBy { it.key }
+                .joinToString(";") { "${it.key}=${it.value}" }
+            varyKeysString.hashCode().toUInt().toString(16)
+        }
+        return fileSystem.resolve(directoryRoot, directoryName, "${urlKey}_${varyKeysHash}.cache")
+    }
+
+    /**
+     * Gets the URL-only cache key prefix for matching all entries of a URL.
+     * Used by findAll() and removeAll() to find entries regardless of vary keys.
+     */
+    private fun getUrlCacheKeyPrefix(url: Url): String {
+        return Sha256.hex(url.toString().encodeToByteArray()) + "_"
+    }
+
+    private fun isExpired(timestamp: Long): Boolean {
+        if (ttl <= 0) return false // ttl <= 0 means "never expires" (mirrors maxSize <= 0 = unlimited)
+        val currentTime = clock()
+        val elapsed = currentTime - timestamp
+        return elapsed > ttl
+    }
+
+    /**
+     * Internal cleanup method - MUST be called from within mutex lock.
+     * Removes expired entries and enforces size limits using LRU eviction.
+     *
+     * Uses stored timestamp from CacheEntry for consistent TTL checking
+     * (same as find() and findAll() methods).
+     */
+    private fun cleanupCacheInternal() {
+        if (maxSize <= 0) return
+
+        try {
+            // Collect cache file info including stored timestamp from CacheEntry and file lastModified
+            val cacheFiles = fileSystem.list(cacheDir)
+                .filter { fileSystem.name(it).endsWith(".cache") }
+                .mapNotNull { file ->
+                    try {
+                        val metadata = fileSystem.metadata(file)
+                        val size = metadata?.size ?: return@mapNotNull null
+                        val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(file))
+                        val lastModified = metadata.lastModifiedAtMillis ?: 0L
+                        CacheFileInfo(file, size, cacheEntry.timestamp, lastModified)
+                    } catch (_: Exception) {
+                        // Delete corrupted files
+                        try {
+                            fileSystem.delete(file)
+                        } catch (_: Exception) {
+                        }
+                        null
+                    }
+                }
+                // Newest first: by stored timestamp, then by file lastModified (tie-breaker for coarse clock resolution)
+                .sortedWith(compareByDescending<CacheFileInfo<P>> { it.timestamp }.thenByDescending { it.lastModifiedAtMillis })
+
+            var totalSize = 0L
+
+            for (fileInfo in cacheFiles) {
+                // First check: remove expired entries
+                if (isExpired(fileInfo.timestamp)) {
+                    fileSystem.delete(fileInfo.path)
+                    continue
+                }
+
+                // Second check: enforce size limit (LRU eviction)
+                if (totalSize + fileInfo.size <= maxSize) {
+                    totalSize += fileInfo.size
+                } else {
+                    fileSystem.delete(fileInfo.path)
+                }
+            }
+        } catch (_: Exception) {
+            // Best-effort cleanup; failures are ignored to avoid breaking cache reads/writes.
+        }
+    }
+}
+
+/**
+ * On-disk representation of a single cache entry (URL, serialized response, timestamp).
+ */
+@Serializable
+private data class CacheEntry(
+    val url: String,
+    @Contextual val response: CachedResponseDataCopy,
+    val timestamp: Long
+) {
+    companion object {
+        /**
+         * Deserializes a [CacheEntry] from ProtoBuf-encoded bytes.
+         *
+         * @param bytes The serialized cache entry.
+         * @return The decoded [CacheEntry].
+         */
+        @OptIn(ExperimentalSerializationApi::class)
+        fun fromByteArray(bytes: ByteArray): CacheEntry {
+            return ProtoBuf.decodeFromByteArray(serializer(), bytes)
+        }
+    }
+
+    /**
+     * Serializes this [CacheEntry] to ProtoBuf-encoded bytes for storage.
+     *
+     * @return The serialized byte array.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    fun toByteArray(): ByteArray {
+        return ProtoBuf.encodeToByteArray(serializer(), this)
+    }
+}
+
+/**
+ * Metadata for a cache file used during cleanup (path, size, stored timestamp, file lastModified).
+ * [lastModifiedAtMillis] is used as a tie-breaker when [timestamp] is equal (e.g. coarse clock resolution on some platforms).
+ */
+private data class CacheFileInfo<P>(
+    val path: P,
+    val size: Long,
+    val timestamp: Long, // Stored timestamp from CacheEntry for consistent TTL checking
+    val lastModifiedAtMillis: Long = 0L // File last-modified for LRU tie-breaker
+)
+
+/**
+ * Exception thrown when an error occurs in the cache storage.
+ */
+public class CacheStorageException(message: String, cause: Throwable? = null) : Exception(message, cause)

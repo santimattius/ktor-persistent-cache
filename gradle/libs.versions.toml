@@ -2,6 +2,7 @@
 agp = "9.0.0"
 kotlin = "2.4.10"
 mavenPublish = "0.37.0"
+binaryCompatibilityValidator = "0.18.2"
 
 android-compileSdk = "36"
 android-minSdk = "24"
@@ -81,3 +82,5 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 # https://github.com/vanniktech/gradle-maven-publish-plugin
 mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
+# https://github.com/Kotlin/binary-compatibility-validator
+binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }

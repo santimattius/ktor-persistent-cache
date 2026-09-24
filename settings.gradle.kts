@@ -33,3 +33,7 @@ dependencyResolutionManagement {
 
 include(":androidApp")
 include(":shared")
+include(":cache-core")
+include(":cache-okio")
+include(":cache-kotlinx-io")
+include(":cache-test-suite")
