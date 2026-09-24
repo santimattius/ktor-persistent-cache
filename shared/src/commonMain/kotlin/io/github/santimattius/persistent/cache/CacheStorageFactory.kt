@@ -7,7 +7,19 @@ import okio.SYSTEM
 
 /**
  * Factory for creating [CacheStorage] instances using okio-based file storage.
+ *
+ * Delegates to `cache-core`'s [FileCacheStorage] over [OkioCacheFileSystem] (design decision #6,
+ * Engram #1505) — the same algorithm previously implemented directly in `OkioFileCacheStorage`,
+ * which is removed in this PR (task 2.5).
  */
+@Deprecated(
+    message = "Use the install(PersistentCache) { ... } client plugin DSL from :cache-core " +
+        "instead. See docs/MIGRATION.md.",
+    replaceWith = ReplaceWith(
+        "PersistentCacheConfig",
+        "io.github.santimattius.persistent.cache.PersistentCacheConfig"
+    )
+)
 object CacheStorageFactory {
 
     /**
@@ -20,19 +32,19 @@ object CacheStorageFactory {
      * Defaults to the platform-specific cache directory.
      * @return A [CacheStorage] implementation that persists data to the file system.
      */
+    @Suppress("DEPRECATION")
+    @OptIn(InternalPersistentCacheApi::class)
     fun create(
         config: CacheConfig,
         fileSystem: FileSystem = FileSystem.SYSTEM,
         clock: () -> Long = { getTimeMillis() },
         cacheDirectoryProvider: CacheDirectoryProvider = getCacheDirectoryProvider()
-    ): CacheStorage = OkioFileCacheStorage(
-        config = OkioFileCacheConfig(
-            fileName = config.cacheDirectory,
-            maxSize = config.maxCacheSize,
-            ttl = config.cacheTtl,
-            cacheDirectoryProvider = cacheDirectoryProvider
-        ),
-        fileSystem = fileSystem,
+    ): CacheStorage = FileCacheStorage(
+        fileSystem = OkioCacheFileSystem(fileSystem),
+        directoryRoot = cacheDirectoryProvider.cacheDirectory,
+        directoryName = config.cacheDirectory,
+        maxSize = config.maxCacheSize,
+        ttl = config.cacheTtl,
         clock = clock
     )
 }

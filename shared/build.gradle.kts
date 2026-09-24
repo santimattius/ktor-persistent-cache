@@ -34,11 +34,13 @@ kotlin {
     jvm()
 
     sourceSets {
-        androidMain.dependencies {
-            implementation(libs.androidx.startup.runtime)
-        }
         commonMain.dependencies {
-            // put your Multiplatform dependencies here
+            // :shared is now a deprecated facade over :cache-core + :cache-okio (design decision
+            // #6, Engram #1505). `api`, not `implementation`: the `ReplaceWith` targets on the
+            // deprecated symbols below, and the re-exposed `CacheDirectoryProvider` / core types,
+            // must resolve transitively for existing consumers (e.g. :androidApp).
+            api(projects.cacheCore)
+            api(projects.cacheOkio)
             implementation(libs.ktor.client.core)
             implementation(libs.okio)
             implementation(libs.kotlinx.serialization.json)
@@ -47,8 +49,6 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
-            implementation(libs.ktor.client.mock)
-            implementation(libs.ktor.client.auth)
         }
     }
 }

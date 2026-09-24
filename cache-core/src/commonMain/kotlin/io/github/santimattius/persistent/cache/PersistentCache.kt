@@ -32,9 +32,17 @@ public class PersistentCacheConfig {
      * The backend SPI used to persist cache entries. `cache-core` has no default backend: a
      * backend module (e.g. `cache-okio`, `cache-kotlinx-io`) or a custom [CacheFileSystem] must
      * supply one before `install(PersistentCache)` can build working storage.
+     *
+     * Declared as [CacheFileSystem]`<*>` (star-projected), not `CacheFileSystem<Any?>`: [P] is
+     * genuinely invariant (it appears in both "in" and "out" positions across the SPI), so a
+     * concrete backend like `cache-okio`'s `OkioCacheFileSystem : CacheFileSystem<okio.Path>`
+     * could never be assigned to a property statically typed `CacheFileSystem<Any?>`. The star
+     * projection accepts any concrete backend; [toCacheStorage] recovers type safety with an
+     * unchecked cast that is sound because every `P` value flowing through [FileCacheStorage]
+     * originates from, and is only ever handed back to, that same erased backend instance.
      */
     @InternalPersistentCacheApi
-    public var fileSystem: CacheFileSystem<Any?>? = null
+    public var fileSystem: CacheFileSystem<*>? = null
 
     /** Supplies the cache root directory. Defaults to the platform-specific [getCacheDirectoryProvider]. */
     public var directoryProvider: CacheDirectoryProvider? = null
@@ -94,16 +102,17 @@ private fun PersistentCacheConfig.toCacheStorage(): CacheStorage {
     return buildFileCacheStorage(backend, root, directory, maxSize, ttl, clock)
 }
 
+@Suppress("UNCHECKED_CAST")
 @OptIn(InternalPersistentCacheApi::class)
-private fun <P> buildFileCacheStorage(
-    fileSystem: CacheFileSystem<P>,
+private fun buildFileCacheStorage(
+    fileSystem: CacheFileSystem<*>,
     root: String,
     directory: String,
     maxSize: Long,
     ttl: Long,
     clock: () -> Long
 ): CacheStorage = FileCacheStorage(
-    fileSystem = fileSystem,
+    fileSystem = fileSystem as CacheFileSystem<Any?>,
     directoryRoot = root,
     directoryName = directory,
     maxSize = maxSize,
