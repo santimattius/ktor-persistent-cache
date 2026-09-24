@@ -17,4 +17,4 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       - name: Check
-        run: ./gradlew :shared:check
+        run: ./gradlew check apiCheck

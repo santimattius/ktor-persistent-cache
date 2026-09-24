@@ -1,0 +1,92 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <ktor-persistent-cache:cache-core>
+open annotation class io.github.santimattius.persistent.cache/InternalPersistentCacheApi : kotlin/Annotation { // io.github.santimattius.persistent.cache/InternalPersistentCacheApi|null[0]
+    constructor <init>() // io.github.santimattius.persistent.cache/InternalPersistentCacheApi.<init>|<init>(){}[0]
+}
+
+abstract interface <#A: kotlin/Any?> io.github.santimattius.persistent.cache/CacheFileSystem { // io.github.santimattius.persistent.cache/CacheFileSystem|null[0]
+    abstract fun createDirectories(#A) // io.github.santimattius.persistent.cache/CacheFileSystem.createDirectories|createDirectories(1:0){}[0]
+    abstract fun delete(#A) // io.github.santimattius.persistent.cache/CacheFileSystem.delete|delete(1:0){}[0]
+    abstract fun exists(#A): kotlin/Boolean // io.github.santimattius.persistent.cache/CacheFileSystem.exists|exists(1:0){}[0]
+    abstract fun list(#A): kotlin.collections/List<#A> // io.github.santimattius.persistent.cache/CacheFileSystem.list|list(1:0){}[0]
+    abstract fun metadata(#A): io.github.santimattius.persistent.cache/CacheFileMetadata? // io.github.santimattius.persistent.cache/CacheFileSystem.metadata|metadata(1:0){}[0]
+    abstract fun name(#A): kotlin/String // io.github.santimattius.persistent.cache/CacheFileSystem.name|name(1:0){}[0]
+    abstract fun read(#A): kotlin/ByteArray // io.github.santimattius.persistent.cache/CacheFileSystem.read|read(1:0){}[0]
+    abstract fun resolve(kotlin/String, kotlin/Array<out kotlin/String>...): #A // io.github.santimattius.persistent.cache/CacheFileSystem.resolve|resolve(kotlin.String;kotlin.Array<out|kotlin.String>...){}[0]
+    abstract fun write(#A, kotlin/ByteArray) // io.github.santimattius.persistent.cache/CacheFileSystem.write|write(1:0;kotlin.ByteArray){}[0]
+}
+
+abstract interface io.github.santimattius.persistent.cache/CacheDirectoryProvider { // io.github.santimattius.persistent.cache/CacheDirectoryProvider|null[0]
+    abstract val cacheDirectory // io.github.santimattius.persistent.cache/CacheDirectoryProvider.cacheDirectory|{}cacheDirectory[0]
+        abstract fun <get-cacheDirectory>(): kotlin/String // io.github.santimattius.persistent.cache/CacheDirectoryProvider.cacheDirectory.<get-cacheDirectory>|<get-cacheDirectory>(){}[0]
+}
+
+final class <#A: kotlin/Any?> io.github.santimattius.persistent.cache/FileCacheStorage : io.ktor.client.plugins.cache.storage/CacheStorage { // io.github.santimattius.persistent.cache/FileCacheStorage|null[0]
+    constructor <init>(io.github.santimattius.persistent.cache/CacheFileSystem<#A>, kotlin/String, kotlin/String, kotlin/Long, kotlin/Long, kotlin/Function0<kotlin/Long> = ...) // io.github.santimattius.persistent.cache/FileCacheStorage.<init>|<init>(io.github.santimattius.persistent.cache.CacheFileSystem<1:0>;kotlin.String;kotlin.String;kotlin.Long;kotlin.Long;kotlin.Function0<kotlin.Long>){}[0]
+
+    final suspend fun find(io.ktor.http/Url, kotlin.collections/Map<kotlin/String, kotlin/String>): io.ktor.client.plugins.cache.storage/CachedResponseData? // io.github.santimattius.persistent.cache/FileCacheStorage.find|find(io.ktor.http.Url;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final suspend fun findAll(io.ktor.http/Url): kotlin.collections/Set<io.ktor.client.plugins.cache.storage/CachedResponseData> // io.github.santimattius.persistent.cache/FileCacheStorage.findAll|findAll(io.ktor.http.Url){}[0]
+    final suspend fun remove(io.ktor.http/Url, kotlin.collections/Map<kotlin/String, kotlin/String>) // io.github.santimattius.persistent.cache/FileCacheStorage.remove|remove(io.ktor.http.Url;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final suspend fun removeAll(io.ktor.http/Url) // io.github.santimattius.persistent.cache/FileCacheStorage.removeAll|removeAll(io.ktor.http.Url){}[0]
+    final suspend fun store(io.ktor.http/Url, io.ktor.client.plugins.cache.storage/CachedResponseData) // io.github.santimattius.persistent.cache/FileCacheStorage.store|store(io.ktor.http.Url;io.ktor.client.plugins.cache.storage.CachedResponseData){}[0]
+}
+
+final class io.github.santimattius.persistent.cache/CacheFileMetadata { // io.github.santimattius.persistent.cache/CacheFileMetadata|null[0]
+    constructor <init>(kotlin/Long?, kotlin/Long?) // io.github.santimattius.persistent.cache/CacheFileMetadata.<init>|<init>(kotlin.Long?;kotlin.Long?){}[0]
+
+    final val lastModifiedAtMillis // io.github.santimattius.persistent.cache/CacheFileMetadata.lastModifiedAtMillis|{}lastModifiedAtMillis[0]
+        final fun <get-lastModifiedAtMillis>(): kotlin/Long? // io.github.santimattius.persistent.cache/CacheFileMetadata.lastModifiedAtMillis.<get-lastModifiedAtMillis>|<get-lastModifiedAtMillis>(){}[0]
+    final val size // io.github.santimattius.persistent.cache/CacheFileMetadata.size|{}size[0]
+        final fun <get-size>(): kotlin/Long? // io.github.santimattius.persistent.cache/CacheFileMetadata.size.<get-size>|<get-size>(){}[0]
+
+    final fun component1(): kotlin/Long? // io.github.santimattius.persistent.cache/CacheFileMetadata.component1|component1(){}[0]
+    final fun component2(): kotlin/Long? // io.github.santimattius.persistent.cache/CacheFileMetadata.component2|component2(){}[0]
+    final fun copy(kotlin/Long? = ..., kotlin/Long? = ...): io.github.santimattius.persistent.cache/CacheFileMetadata // io.github.santimattius.persistent.cache/CacheFileMetadata.copy|copy(kotlin.Long?;kotlin.Long?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.santimattius.persistent.cache/CacheFileMetadata.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.santimattius.persistent.cache/CacheFileMetadata.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.santimattius.persistent.cache/CacheFileMetadata.toString|toString(){}[0]
+}
+
+final class io.github.santimattius.persistent.cache/CacheStorageException : kotlin/Exception { // io.github.santimattius.persistent.cache/CacheStorageException|null[0]
+    constructor <init>(kotlin/String, kotlin/Throwable? = ...) // io.github.santimattius.persistent.cache/CacheStorageException.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+}
+
+final class io.github.santimattius.persistent.cache/PersistentCacheConfig { // io.github.santimattius.persistent.cache/PersistentCacheConfig|null[0]
+    constructor <init>() // io.github.santimattius.persistent.cache/PersistentCacheConfig.<init>|<init>(){}[0]
+
+    final var clock // io.github.santimattius.persistent.cache/PersistentCacheConfig.clock|{}clock[0]
+        final fun <get-clock>(): kotlin/Function0<kotlin/Long> // io.github.santimattius.persistent.cache/PersistentCacheConfig.clock.<get-clock>|<get-clock>(){}[0]
+        final fun <set-clock>(kotlin/Function0<kotlin/Long>) // io.github.santimattius.persistent.cache/PersistentCacheConfig.clock.<set-clock>|<set-clock>(kotlin.Function0<kotlin.Long>){}[0]
+    final var directory // io.github.santimattius.persistent.cache/PersistentCacheConfig.directory|{}directory[0]
+        final fun <get-directory>(): kotlin/String // io.github.santimattius.persistent.cache/PersistentCacheConfig.directory.<get-directory>|<get-directory>(){}[0]
+        final fun <set-directory>(kotlin/String) // io.github.santimattius.persistent.cache/PersistentCacheConfig.directory.<set-directory>|<set-directory>(kotlin.String){}[0]
+    final var directoryProvider // io.github.santimattius.persistent.cache/PersistentCacheConfig.directoryProvider|{}directoryProvider[0]
+        final fun <get-directoryProvider>(): io.github.santimattius.persistent.cache/CacheDirectoryProvider? // io.github.santimattius.persistent.cache/PersistentCacheConfig.directoryProvider.<get-directoryProvider>|<get-directoryProvider>(){}[0]
+        final fun <set-directoryProvider>(io.github.santimattius.persistent.cache/CacheDirectoryProvider?) // io.github.santimattius.persistent.cache/PersistentCacheConfig.directoryProvider.<set-directoryProvider>|<set-directoryProvider>(io.github.santimattius.persistent.cache.CacheDirectoryProvider?){}[0]
+    final var fileSystem // io.github.santimattius.persistent.cache/PersistentCacheConfig.fileSystem|{}fileSystem[0]
+        final fun <get-fileSystem>(): io.github.santimattius.persistent.cache/CacheFileSystem<*>? // io.github.santimattius.persistent.cache/PersistentCacheConfig.fileSystem.<get-fileSystem>|<get-fileSystem>(){}[0]
+        final fun <set-fileSystem>(io.github.santimattius.persistent.cache/CacheFileSystem<*>?) // io.github.santimattius.persistent.cache/PersistentCacheConfig.fileSystem.<set-fileSystem>|<set-fileSystem>(io.github.santimattius.persistent.cache.CacheFileSystem<*>?){}[0]
+    final var maxSize // io.github.santimattius.persistent.cache/PersistentCacheConfig.maxSize|{}maxSize[0]
+        final fun <get-maxSize>(): kotlin/Long // io.github.santimattius.persistent.cache/PersistentCacheConfig.maxSize.<get-maxSize>|<get-maxSize>(){}[0]
+        final fun <set-maxSize>(kotlin/Long) // io.github.santimattius.persistent.cache/PersistentCacheConfig.maxSize.<set-maxSize>|<set-maxSize>(kotlin.Long){}[0]
+    final var public // io.github.santimattius.persistent.cache/PersistentCacheConfig.public|{}public[0]
+        final fun <get-public>(): kotlin/Boolean // io.github.santimattius.persistent.cache/PersistentCacheConfig.public.<get-public>|<get-public>(){}[0]
+        final fun <set-public>(kotlin/Boolean) // io.github.santimattius.persistent.cache/PersistentCacheConfig.public.<set-public>|<set-public>(kotlin.Boolean){}[0]
+    final var shared // io.github.santimattius.persistent.cache/PersistentCacheConfig.shared|{}shared[0]
+        final fun <get-shared>(): kotlin/Boolean // io.github.santimattius.persistent.cache/PersistentCacheConfig.shared.<get-shared>|<get-shared>(){}[0]
+        final fun <set-shared>(kotlin/Boolean) // io.github.santimattius.persistent.cache/PersistentCacheConfig.shared.<set-shared>|<set-shared>(kotlin.Boolean){}[0]
+    final var ttl // io.github.santimattius.persistent.cache/PersistentCacheConfig.ttl|{}ttl[0]
+        final fun <get-ttl>(): kotlin/Long // io.github.santimattius.persistent.cache/PersistentCacheConfig.ttl.<get-ttl>|<get-ttl>(){}[0]
+        final fun <set-ttl>(kotlin/Long) // io.github.santimattius.persistent.cache/PersistentCacheConfig.ttl.<set-ttl>|<set-ttl>(kotlin.Long){}[0]
+}
+
+final val io.github.santimattius.persistent.cache/PersistentCache // io.github.santimattius.persistent.cache/PersistentCache|{}PersistentCache[0]
+    final fun <get-PersistentCache>(): io.ktor.client.plugins.api/ClientPlugin<io.github.santimattius.persistent.cache/PersistentCacheConfig> // io.github.santimattius.persistent.cache/PersistentCache.<get-PersistentCache>|<get-PersistentCache>(){}[0]
+
+final fun io.github.santimattius.persistent.cache/getCacheDirectoryProvider(): io.github.santimattius.persistent.cache/CacheDirectoryProvider // io.github.santimattius.persistent.cache/getCacheDirectoryProvider|getCacheDirectoryProvider(){}[0]

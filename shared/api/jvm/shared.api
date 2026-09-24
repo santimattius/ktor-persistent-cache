@@ -22,14 +22,6 @@ public final class io/github/santimattius/persistent/cache/CacheConfig : io/gith
 	public fun toString ()Ljava/lang/String;
 }
 
-public abstract interface class io/github/santimattius/persistent/cache/CacheDirectoryProvider {
-	public abstract fun getCacheDirectory ()Lokio/Path;
-}
-
-public final class io/github/santimattius/persistent/cache/CacheDirectoryProvider_jvmKt {
-	public static final fun getCacheDirectoryProvider ()Lio/github/santimattius/persistent/cache/CacheDirectoryProvider;
-}
-
 public abstract interface class io/github/santimattius/persistent/cache/CacheStorageConfig {
 	public static final field Companion Lio/github/santimattius/persistent/cache/CacheStorageConfig$Companion;
 	public fun getCacheDirectory ()Ljava/lang/String;
@@ -46,11 +38,6 @@ public final class io/github/santimattius/persistent/cache/CacheStorageConfig$De
 	public static fun getCacheDirectory (Lio/github/santimattius/persistent/cache/CacheStorageConfig;)Ljava/lang/String;
 	public static fun getCacheTtl (Lio/github/santimattius/persistent/cache/CacheStorageConfig;)J
 	public static fun getMaxCacheSize (Lio/github/santimattius/persistent/cache/CacheStorageConfig;)J
-}
-
-public final class io/github/santimattius/persistent/cache/CacheStorageException : java/lang/Exception {
-	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
 public final class io/github/santimattius/persistent/cache/CacheStorageFactory {

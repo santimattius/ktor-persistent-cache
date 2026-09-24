@@ -1,0 +1,24 @@
+public final class io/github/santimattius/persistent/cache/OkioCacheFileSystem : io/github/santimattius/persistent/cache/CacheFileSystem {
+	public fun <init> ()V
+	public fun <init> (Lokio/FileSystem;)V
+	public synthetic fun <init> (Lokio/FileSystem;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun createDirectories (Ljava/lang/Object;)V
+	public fun createDirectories (Lokio/Path;)V
+	public synthetic fun delete (Ljava/lang/Object;)V
+	public fun delete (Lokio/Path;)V
+	public synthetic fun exists (Ljava/lang/Object;)Z
+	public fun exists (Lokio/Path;)Z
+	public synthetic fun list (Ljava/lang/Object;)Ljava/util/List;
+	public fun list (Lokio/Path;)Ljava/util/List;
+	public synthetic fun metadata (Ljava/lang/Object;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public fun metadata (Lokio/Path;)Lio/github/santimattius/persistent/cache/CacheFileMetadata;
+	public synthetic fun name (Ljava/lang/Object;)Ljava/lang/String;
+	public fun name (Lokio/Path;)Ljava/lang/String;
+	public synthetic fun read (Ljava/lang/Object;)[B
+	public fun read (Lokio/Path;)[B
+	public synthetic fun resolve (Ljava/lang/String;[Ljava/lang/String;)Ljava/lang/Object;
+	public fun resolve (Ljava/lang/String;[Ljava/lang/String;)Lokio/Path;
+	public synthetic fun write (Ljava/lang/Object;[B)V
+	public fun write (Lokio/Path;[B)V
+}
+
