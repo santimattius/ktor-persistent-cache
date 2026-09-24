@@ -17,6 +17,7 @@ androidx-core = "1.17.0"
 
 ktorVersion = "3.5.2"
 okio = "3.18.1"
+kotlinxIo = "0.9.1"
 kotlinxSerializationJson = "1.11.0"
 kotlinxSerializationProtobuf = "1.11.0"
 kotlinxCoroutines = "1.11.0"
@@ -59,6 +60,8 @@ ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktorVer
 # Okio
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
+# kotlinx-io
+kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinxIo" }
 
 #App Startup (Android)
 androidx-startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "startupRuntime" }
