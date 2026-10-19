@@ -15,7 +15,7 @@ androidx-activity = "1.12.3"
 androidx-appcompat = "1.7.1"
 androidx-core = "1.17.0"
 
-ktorVersion = "3.5.2"
+ktorVersion = "3.6.0"
 okio = "3.18.1"
 kotlinxIo = "0.9.1"
 kotlinxSerializationJson = "1.11.0"
