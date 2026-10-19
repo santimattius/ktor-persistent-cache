@@ -1,6 +1,6 @@
 [versions]
 agp = "9.0.0"
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 mavenPublish = "0.37.0"
 binaryCompatibilityValidator = "0.18.2"
 
@@ -15,7 +15,7 @@ androidx-activity = "1.12.3"
 androidx-appcompat = "1.7.1"
 androidx-core = "1.17.0"
 
-ktorVersion = "3.5.2"
+ktorVersion = "3.6.0"
 okio = "3.18.2"
 kotlinxIo = "0.9.1"
 kotlinxSerializationJson = "1.11.0"
