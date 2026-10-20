@@ -7,8 +7,7 @@ import okio.Path.Companion.toPath
 /**
  * [CacheFileSystem]<[Path]> adapter over a real Okio [FileSystem]. This is the first concrete
  * backend for `cache-core`'s [FileCacheStorage]: every I/O call `cache-core` needs is delegated
- * here, unchanged in on-disk behavior from the pre-split `OkioFileCacheStorage` (design decision
- * #6, Engram #1505).
+ * here, unchanged in on-disk behavior from the pre-split `OkioFileCacheStorage`.
  *
  * @property fileSystem The backing Okio [FileSystem]. Defaults to [FileSystem.SYSTEM]; tests
  *   typically pass an `okio.fakefilesystem.FakeFileSystem` instead.

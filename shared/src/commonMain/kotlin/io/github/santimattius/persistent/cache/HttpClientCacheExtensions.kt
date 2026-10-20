@@ -8,7 +8,7 @@ import io.ktor.client.plugins.cache.storage.CacheStorage
  * Installs persistent file-based HTTP caching on this client using [HttpCache].
  *
  * When [CacheConfig.enabled] is true, responses are stored on disk via [CacheStorageFactory]
- * (delegating to `cache-core` + `cache-okio`, design decision #6, Engram #1505) under the
+ * (delegating to `cache-core` + `cache-okio`) under the
  * directory supplied by [cacheDirectoryProvider], respecting [CacheConfig.maxCacheSize]
  * and [CacheConfig.cacheTtl]. When false, the cache plugin is still installed but uses
  * [CacheStorage.Disabled], so no storage is used.

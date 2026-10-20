@@ -8,7 +8,7 @@ package io.github.santimattius.persistent.cache
  *
  * BREAKING CHANGE from the pre-split `:shared` API: [cacheDirectory] returns [String], not
  * `okio.Path`, so `cache-core` has zero Okio/kotlinx-io dependencies. There is no deprecated
- * `okio.Path`-returning overload — see `docs/MIGRATION.md` (accepted hard break, Engram #1506).
+ * `okio.Path`-returning overload — see `docs/MIGRATION.md`.
  */
 public interface CacheDirectoryProvider {
 

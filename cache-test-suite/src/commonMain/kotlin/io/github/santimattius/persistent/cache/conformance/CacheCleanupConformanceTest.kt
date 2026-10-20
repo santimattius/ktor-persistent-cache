@@ -20,8 +20,8 @@ import kotlin.test.assertTrue
  * The original bug: cleanupCache() tried to acquire the mutex inside store(),
  * which already held the mutex, causing a deadlock.
  *
- * Relocated from `shared/commonTest/CacheCleanupBehaviorTest.kt` (design decision #5,
- * Engram #1505): a concrete backend subclasses this with a one-line [createFileSystem] factory.
+ * Relocated from `shared/commonTest/CacheCleanupBehaviorTest.kt`: a concrete backend
+ * subclasses this with a one-line [createFileSystem] factory.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class CacheCleanupConformanceTest<P> : CacheConformanceSupport<P>() {

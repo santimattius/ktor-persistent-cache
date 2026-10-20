@@ -8,8 +8,7 @@ import io.ktor.util.date.getTimeMillis
 /**
  * Reference [CacheFileSystem]<[String]> implementation backed by in-memory maps.
  *
- * Replaces the old `doubles/FakeFileSystem.kt` (which extended `okio.FileSystem` and therefore
- * could not move to `cache-core`, per design decision #4, Engram #1505). Every backend
+ * Replaces the old `doubles/FakeFileSystem.kt`. Every backend
  * (`cache-okio`, `cache-kotlinx-io`) is expected to behave identically to this reference when
  * subclassing the shared conformance suites from `:cache-test-suite`.
  */

@@ -8,8 +8,7 @@ import kotlin.random.Random
 /**
  * Shared real-temp-directory setup for `cache-kotlinx-io`'s conformance-suite subclasses.
  *
- * Unlike `cache-okio` (backed by the official `okio-fakefilesystem` for its conformance suites,
- * design decision #4, Engram #1505), kotlinx-io ships no in-memory fake filesystem in 0.9.1, so
+ * Unlike `cache-okio`, kotlinx-io ships no in-memory fake filesystem in 0.9.1, so
  * every conformance suite for this backend runs against a real, unique-per-instance temp
  * directory instead. [CacheConformanceSupport.root][io.github.santimattius.persistent.cache.conformance.support.CacheConformanceSupport]
  * is `protected open`, so each subclass overrides it with the result of [freshTempDirectory].

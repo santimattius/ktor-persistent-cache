@@ -27,15 +27,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Auth + persistent-cache coexistence tests per spec (Engram #1504, domain `cache-core-storage`,
- * requirement "Auth + HttpCache interop routing preserved").
+ * Auth + persistent-cache coexistence tests per spec.
  *
  * MOVED from `shared/commonTest/AuthPluginInteropTest.kt` (task 2.4) and rewritten against the
  * new `install(PersistentCache) { shared = false }` DSL from `cache-core`, backed by the real
  * [OkioCacheFileSystem] instead of the deprecated `installPersistentCache(CacheConfig(...))`
- * facade — this is the DSL's own interop gate, not the facade's (the facade's equivalent
- * regression coverage stays in `shared/commonTest/CacheStorageFactoryBehaviorTest.kt`, per task
- * 2.8 and the design's testing strategy table, Engram #1505).
+ * facade — this is the DSL's own interop gate, not the facade's.
  *
  * Exercises an [HttpClient] with both [Auth] (Bearer refresh on 401) and [PersistentCache]
  * installed together. Persistence is verified by opening a second client against the same

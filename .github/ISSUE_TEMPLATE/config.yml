@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/santimattius/ktor-persistent-cache/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue. See SECURITY.md.
+  - name: Usage questions and support
+    url: https://github.com/santimattius/ktor-persistent-cache/blob/main/SUPPORT.md
+    about: Read the support guide before asking a question.

@@ -16,8 +16,8 @@ import kotlin.test.assertEquals
 /**
  * DEVIATION from tasks.md 2.3: the task names moving `Sha256OkioCrossCheckTest.kt` (task 1.5)
  * from `cache-core/commonTest` to `cache-okio/commonTest`. That move is impossible for the exact
- * same reason task 1.5 itself could not live in `shared/commonTest` (documented in the Phase 1
- * apply-progress, Engram #1517, Deviation #1): [Sha256] is `internal` to `cache-core`'s
+ * same reason task 1.5 itself could not live in `shared/commonTest`:
+ * [Sha256] is `internal` to `cache-core`'s
  * `commonMain`, and Kotlin `internal` visibility never crosses a Gradle module boundary, even
  * across a dependency edge and even when the *same* module's `commonTest` (which IS a friend
  * source set) could see it. `cache-okio` is a different module than `cache-core`, so it can no

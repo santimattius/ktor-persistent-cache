@@ -1,0 +1,65 @@
+name: Bug report
+description: Report something that does not work as documented.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search existing issues first.
+        For security vulnerabilities, do not use this form; see the security policy instead.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: A minimal code sample or steps that reproduce the problem.
+      render: kotlin
+    validations:
+      required: true
+  - type: input
+    id: library-version
+    attributes:
+      label: Library version
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Storage backend
+      options:
+        - cache-okio
+        - cache-kotlinx-io
+        - Not sure
+    validations:
+      required: true
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Affected platforms
+      options:
+        - label: Android
+        - label: iOS
+        - label: JVM
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Kotlin, Ktor, and Ktor engine versions; OS / device; JDK.
+      placeholder: "Kotlin 2.4.20, Ktor 3.6.0 (CIO), JDK 21, macOS"
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      render: text
+    validations:
+      required: false

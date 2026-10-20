@@ -20,8 +20,7 @@ import kotlin.test.assertTrue
  * 2. Cleanup removes expired entries using the same TTL logic as find()
  * 3. Size-based LRU eviction works correctly with TTL
  *
- * Relocated from `shared/commonTest/TtlConsistencyBehaviorTest.kt` (design decision #5,
- * Engram #1505).
+ * Relocated from `shared/commonTest/TtlConsistencyBehaviorTest.kt`.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class TtlConsistencyConformanceTest<P> : CacheConformanceSupport<P>() {

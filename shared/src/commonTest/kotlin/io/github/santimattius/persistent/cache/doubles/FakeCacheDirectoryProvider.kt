@@ -7,7 +7,7 @@ import io.github.santimattius.persistent.cache.CacheDirectoryProvider
  * Allows tests to specify a custom cache directory path.
  *
  * Implements `cache-core`'s [CacheDirectoryProvider] (returns [String], not `okio.Path`):
- * `:shared`'s own copy was deleted in this PR (task 2.7, accepted hard break, Engram #1506) and
+ * `:shared`'s own copy was deleted in this PR and
  * this FQN now resolves to `cache-core`'s version via `:shared`'s `api(projects.cacheCore)`
  * dependency.
  */

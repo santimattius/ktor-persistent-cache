@@ -11,8 +11,7 @@ import kotlin.test.assertEquals
  *
  * DEVIATION from tasks.md 1.5: the task names `shared/commonTest` as the temporary
  * home for this test. That is not possible: [Sha256] is `internal` to `cache-core`
- * (design decision #1, Engram #1505) and Kotlin's `internal` visibility does not
- * cross a Gradle module boundary even with a dependency edge — `:shared` cannot see
+ * and Kotlin's `internal` visibility does not cross a Gradle module boundary even with a dependency edge — `:shared` cannot see
  * it regardless of any test-only dependency added on `:cache-core`. This test lives
  * here instead, with Okio added only to `cache-core`'s `commonTest` (never
  * `commonMain`), so `cache-core`'s zero-I/O-dependency production surface is
