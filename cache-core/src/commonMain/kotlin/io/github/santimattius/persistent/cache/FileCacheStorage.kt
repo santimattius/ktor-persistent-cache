@@ -198,6 +198,28 @@ public class FileCacheStorage<P>(
     }
 
     /**
+     * Removes every cached response managed by this storage.
+     *
+     * @throws CacheStorageException if clearing fails
+     */
+    override suspend fun clear() {
+        cacheMutex.withLock {
+            try {
+                val cacheFiles = fileSystem.list(cacheDir)
+                    .filter { fileSystem.name(it).endsWith(".cache") }
+
+                for (file in cacheFiles) {
+                    fileSystem.delete(file)
+                }
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (e: Exception) {
+                throw CacheStorageException("Failed to clear cache entries", e)
+            }
+        }
+    }
+
+    /**
      * Generates the cache file path for a URL with optional vary keys.
      * Uses SHA-256 hashing to produce a fixed-length (64 hex chars) filename component,
      * avoiding filesystem limits on file name length regardless of URL length.
