@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
  * - The original bug tried to create directories at the file path after deletion
  * - The fix simply deletes the file without attempting to recreate anything
  *
- * Relocated from `shared/commonTest/RemoveAllBehaviorTest.kt` (design decision #5, Engram #1505).
+ * Relocated from `shared/commonTest/RemoveAllBehaviorTest.kt`.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class RemoveAllConformanceTest<P> : CacheConformanceSupport<P>() {

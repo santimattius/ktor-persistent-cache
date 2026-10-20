@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 /**
  * Behavioral tests for cache expiration (TTL) functionality.
  *
- * Relocated from `shared/commonTest/CacheExpirationTest.kt` (design decision #5, Engram #1505).
+ * Relocated from `shared/commonTest/CacheExpirationTest.kt`.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class CacheExpirationConformanceTest<P> : CacheConformanceSupport<P>() {

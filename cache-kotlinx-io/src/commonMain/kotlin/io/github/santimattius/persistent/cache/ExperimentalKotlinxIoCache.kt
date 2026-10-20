@@ -5,7 +5,7 @@ package io.github.santimattius.persistent.cache
  *
  * kotlinx-io's own `kotlinx.io.files` package is Alpha-stability upstream (kotlinx-io 0.9.1), and
  * this backend is deliberately kept on the SAME version train as every other module in this
- * library rather than a separate versioning scheme (design decision #3, Engram #1505). Okio
+ * library rather than a separate versioning scheme. Okio
  * remains the facade default.
  *
  * This is a `WARNING`-level opt-in — deliberately weaker than [InternalPersistentCacheApi]'s

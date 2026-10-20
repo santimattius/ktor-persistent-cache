@@ -12,8 +12,8 @@ import kotlin.test.assertTrue
  * Direct unit tests for [OkioCacheFileSystem]: the [CacheFileSystem]<[okio.Path]> adapter that
  * lets `cache-core`'s [FileCacheStorage] run on top of a real Okio [okio.FileSystem].
  *
- * Uses the official `com.squareup.okio:okio-fakefilesystem` double (design decision #4,
- * Engram #1505) instead of the hand-rolled `shared/commonTest/doubles/FakeFileSystem.kt`, which
+ * Uses the official `com.squareup.okio:okio-fakefilesystem` double instead of the hand-rolled
+ * `shared/commonTest/doubles/FakeFileSystem.kt`, which
  * is deleted in this PR (task 2.8).
  */
 @OptIn(InternalPersistentCacheApi::class)

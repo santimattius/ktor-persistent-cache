@@ -8,8 +8,8 @@ import okio.SYSTEM
 /**
  * Factory for creating [CacheStorage] instances using okio-based file storage.
  *
- * Delegates to `cache-core`'s [FileCacheStorage] over [OkioCacheFileSystem] (design decision #6,
- * Engram #1505) — the same algorithm previously implemented directly in `OkioFileCacheStorage`,
+ * Delegates to `cache-core`'s [FileCacheStorage] over [OkioCacheFileSystem] — the same algorithm
+ * previously implemented directly in `OkioFileCacheStorage`,
  * which is removed in this PR (task 2.5).
  */
 @Deprecated(

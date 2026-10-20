@@ -8,7 +8,7 @@ import kotlinx.io.readByteArray
 
 /**
  * [CacheFileSystem]<[Path]> adapter over kotlinx-io's [SystemFileSystem]. This is the second
- * concrete backend for `cache-core`'s [FileCacheStorage] (design decision #3, Engram #1505),
+ * concrete backend for `cache-core`'s [FileCacheStorage],
  * gated behind [ExperimentalKotlinxIoCache] because kotlinx-io's own `kotlinx.io.files` package is
  * Alpha-stability upstream (kotlinx-io 0.9.1) — Okio remains the recommended default backend.
  *

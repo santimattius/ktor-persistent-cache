@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * These tests verify that the cache correctly differentiates between requests
  * with the same URL but different Vary headers (e.g., Accept-Language, Accept-Encoding).
  *
- * Relocated from `shared/commonTest/VaryKeysBehaviorTest.kt` (design decision #5, Engram #1505).
+ * Relocated from `shared/commonTest/VaryKeysBehaviorTest.kt`.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class VaryKeysConformanceTest<P> : CacheConformanceSupport<P>() {

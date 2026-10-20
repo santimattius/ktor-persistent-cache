@@ -16,8 +16,7 @@ import kotlin.test.assertTrue
  * 2. Initialization is thread-safe (no race conditions)
  * 3. Operations work correctly after initialization
  *
- * Relocated from `shared/commonTest/InitializationBehaviorTest.kt` (design decision #5,
- * Engram #1505).
+ * Relocated from `shared/commonTest/InitializationBehaviorTest.kt`.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class InitializationConformanceTest<P> : CacheConformanceSupport<P>() {

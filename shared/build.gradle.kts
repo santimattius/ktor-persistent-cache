@@ -35,8 +35,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // :shared is now a deprecated facade over :cache-core + :cache-okio (design decision
-            // #6, Engram #1505). `api`, not `implementation`: the `ReplaceWith` targets on the
+            // :shared is a deprecated facade over :cache-core + :cache-okio. `api`, not
+            // `implementation`: the `ReplaceWith` targets on the
             // deprecated symbols below, and the re-exposed `CacheDirectoryProvider` / core types,
             // must resolve transitively for existing consumers (e.g. :androidApp).
             api(projects.cacheCore)
@@ -57,7 +57,7 @@ kotlin {
 // https://github.com/vanniktech/gradle-maven-publish-plugin
 // Supports com.android.kotlin.multiplatform.library out of the box.
 mavenPublishing {
-    // Maven Central: uncomment and configure credentials (see docs/PUBLISHING.md)
+    // Maven Central publishing; credentials and signing are supplied externally (see docs/PUBLISHING.md)
     publishToMavenCentral()
     signAllPublications()
     coordinates(

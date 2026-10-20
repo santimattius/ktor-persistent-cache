@@ -16,7 +16,7 @@ import kotlin.test.assertNotNull
  * `maxSize <= 0` = "unlimited" convention. This is verified across both [find] and [findAll]
  * after advancing the clock far beyond any realistic TTL window.
  *
- * Relocated from `shared/commonTest/InfiniteTtlBehaviorTest.kt` (design decision #5, Engram #1505).
+ * Relocated from `shared/commonTest/InfiniteTtlBehaviorTest.kt`.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class InfiniteTtlConformanceTest<P> : CacheConformanceSupport<P>() {

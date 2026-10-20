@@ -37,7 +37,7 @@ class Sha256Test {
 
         val result = Sha256.hex(input.encodeToByteArray())
 
-        // NOTE: the spec artifact (Engram #1504) lists this vector as 63 hex chars
+        // NOTE: the spec artifact lists this vector as 63 hex chars
         // ("...419db06c"), missing the trailing "1". A SHA-256 digest is always
         // exactly 64 hex chars (32 bytes); the correct RFC 6234 vector for this
         // input ends in "...419db06c1", verified independently below.

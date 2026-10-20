@@ -10,8 +10,8 @@ import kotlin.test.BeforeTest
  * Shared setup/helpers for every conformance suite in this module.
  *
  * A concrete backend (an in-memory reference double, `cache-okio`, `cache-kotlinx-io`)
- * subclasses each conformance test with a one-line [createFileSystem] factory, per design
- * decision #5 (Engram #1505): the same test bodies run unmodified against every backend.
+ * subclasses each conformance test with a one-line [createFileSystem] factory, so
+ * the same test bodies run unmodified against every backend.
  */
 @OptIn(InternalPersistentCacheApi::class)
 abstract class CacheConformanceSupport<P> {

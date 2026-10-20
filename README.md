@@ -1,8 +1,8 @@
 # Ktor Persistent Cache
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-2.3.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
-[![Ktor](https://img.shields.io/badge/Ktor-3.4.0-000000?logo=ktor&logoColor=white)](https://ktor.io)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-2.4.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
+[![Ktor](https://img.shields.io/badge/Ktor-3.6.0-000000?logo=ktor&logoColor=white)](https://ktor.io)
 [![Android](https://img.shields.io/badge/Android-AGP%209.0-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
 [![iOS](https://img.shields.io/badge/iOS-Supported-8E8E93?logo=apple&logoColor=white)](https://developer.apple.com)
 [![JVM](https://img.shields.io/badge/JVM-Supported-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
@@ -62,12 +62,12 @@ and platform-appropriate cache directories.
 
 ## Requirements
 
-- **Kotlin** 2.3.0+
-- **Ktor** HttpClient (e.g. `ktor-client-core` 3.4.0+) and an engine (CIO, OkHttp, etc.) for your
+- **Kotlin** 2.4.20+ (the version this library is built and tested with)
+- **Ktor** HttpClient (`ktor-client-core` 3.6.0, the version this library is built against) and an engine (CIO, OkHttp, etc.) for your
   targets
-- **Android**: minSdk 24+, JDK 11+
+- **Android**: minSdk 24+, JVM target 17
 - **iOS**: Standard deployment targets
-- **JVM**: JDK 11+
+- **JVM**: JDK 17+
 
 ---
 
@@ -120,8 +120,6 @@ ktor-persistent-cache-kotlinx-io = { group = "io.github.santimattius", name = "k
 ```kotlin
 repositories {
     mavenCentral()
-    // For snapshots:
-    // maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
 }
 ```
 
@@ -374,6 +372,14 @@ Coordinates and POM are configured in each module's `build.gradle.kts`.
 
 ---
 
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue
+or pull request, and follow the [Code of Conduct](CODE_OF_CONDUCT.md). To report a vulnerability,
+see [SECURITY.md](SECURITY.md); for usage questions, see [SUPPORT.md](SUPPORT.md).
+
+---
+
 ## License
 
 This project is licensed under
@@ -392,3 +398,6 @@ the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0.tx
 | kotlinx-io               | [github.com/Kotlin/kotlinx-io](https://github.com/Kotlin/kotlinx-io)                |
 | Kotlin Multiplatform     | [kotlinlang.org/docs/multiplatform](https://kotlinlang.org/docs/multiplatform.html) |
 | Publishing (this repo)   | [docs/PUBLISHING.md](docs/PUBLISHING.md)                                            |
+| Contributing             | [CONTRIBUTING.md](CONTRIBUTING.md)                                                  |
+| Security policy          | [SECURITY.md](SECURITY.md)                                                          |
+| Code of Conduct          | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                            |

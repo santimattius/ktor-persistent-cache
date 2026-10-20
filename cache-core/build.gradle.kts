@@ -56,13 +56,11 @@ kotlin {
     }
 }
 
-// Task 4.5 trial: klib (iOS) ABI validation, enabled on this module only. Confirmed on this
-// macOS host (matching CI's macOS-latest runner): `klibApiDump`/`klibApiCheck` run cleanly and
-// reproducibly (identical output across two consecutive dumps) for iosArm64/iosSimulatorArm64/
-// iosX64, and `klibApiCheck` genuinely fails when the committed `cache-core.klib.api` is
-// corrupted — see apply-progress for the corrupt/restore evidence. Kept scoped to this one
-// module per the design's fallback stance (Engram #1505); not rolled out to shared/okio/
-// kotlinx-io in this batch.
+// klib (iOS) ABI validation, enabled on this module only. `klibApiDump`/`klibApiCheck` run
+// reproducibly on a macOS host (matching CI's macOS-latest runner) for iosArm64/
+// iosSimulatorArm64/iosX64, and `klibApiCheck` fails when the committed `cache-core.klib.api`
+// baseline diverges from the compiled API. Kept scoped to this one module; not rolled out to
+// shared/okio/kotlinx-io.
 @OptIn(ExperimentalBCVApi::class)
 apiValidation {
     klib {

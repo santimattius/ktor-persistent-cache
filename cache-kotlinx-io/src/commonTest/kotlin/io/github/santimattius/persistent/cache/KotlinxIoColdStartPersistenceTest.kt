@@ -17,7 +17,7 @@ import kotlin.test.assertNull
  * Cold-start (app-restart) persistence for [KotlinxIoCacheFileSystem]: proves data written by one
  * [KotlinxIoCacheFileSystem]-backed instance is readable by a FRESH instance pointed at the same
  * real, on-disk directory. This is the "real backend, not fake" contract that `cache-okio`'s own
- * cold-start test proves (design decision #5, Engram #1505) — required as an explicit task for
+ * cold-start test proves — required as an explicit task for
  * this backend because kotlinx-io ships no in-memory fake filesystem in 0.9.1, so every test in
  * this module already runs against a real directory; this test is the one that specifically
  * exercises a discarded-and-recreated instance, simulating a real app restart.
