@@ -1,9 +1,9 @@
 package io.github.santimattius.persistent.cache.conformance
 
-import io.github.santimattius.persistent.cache.FileCacheStorage
 import io.github.santimattius.persistent.cache.InternalPersistentCacheApi
 import io.github.santimattius.persistent.cache.conformance.support.CacheConformanceSupport
 import io.github.santimattius.persistent.cache.conformance.support.TestDataFactory
+import io.ktor.client.plugins.cache.storage.CacheStorage
 import io.ktor.http.Url
 import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 @OptIn(InternalPersistentCacheApi::class)
 abstract class RemoveAllConformanceTest<P> : CacheConformanceSupport<P>() {
 
-    private lateinit var storage: FileCacheStorage<P>
+    private lateinit var storage: CacheStorage
 
     @BeforeTest
     fun setUpStorage() {
@@ -115,6 +115,37 @@ abstract class RemoveAllConformanceTest<P> : CacheConformanceSupport<P>() {
             retrieved.body.decodeToString(),
             "Should retrieve the new data"
         )
+    }
+
+    @Test
+    fun `given cached entries when clear is called then every cache entry is removed`() = runTest {
+        // Given
+        val firstUrl = Url("https://api.example.com/first")
+        val secondUrl = Url("https://api.example.com/second")
+        val firstVaryKeys = mapOf("Accept-Language" to "en")
+        val secondVaryKeys = mapOf("Accept-Language" to "es")
+
+        storage.store(
+            firstUrl,
+            TestDataFactory.createCachedResponseWithVaryKeys(url = firstUrl.toString(), varyKeys = firstVaryKeys)
+        )
+        storage.store(
+            firstUrl,
+            TestDataFactory.createCachedResponseWithVaryKeys(url = firstUrl.toString(), varyKeys = secondVaryKeys)
+        )
+        storage.store(secondUrl, TestDataFactory.createCachedResponse(url = secondUrl.toString()))
+        val unrelatedFile = cacheFilePath("keep.txt")
+        fileSystem.write(unrelatedFile, "keep".encodeToByteArray())
+
+        // When
+        storage.clear()
+
+        // Then
+        assertTrue(storage.findAll(firstUrl).isEmpty(), "All variants for the first URL should be removed")
+        assertTrue(storage.findAll(secondUrl).isEmpty(), "The second URL entry should be removed")
+        assertTrue(cacheFiles().isEmpty(), "No cache files should remain")
+        assertTrue(fileSystem.exists(unrelatedFile), "Unrelated files should remain")
+        assertTrue(fileSystem.exists(cacheDir()), "Cache directory should remain intact")
     }
 
     @Test

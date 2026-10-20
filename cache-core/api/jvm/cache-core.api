@@ -39,6 +39,7 @@ public final class io/github/santimattius/persistent/cache/CacheStorageException
 public final class io/github/santimattius/persistent/cache/FileCacheStorage : io/ktor/client/plugins/cache/storage/CacheStorage {
 	public fun <init> (Lio/github/santimattius/persistent/cache/CacheFileSystem;Ljava/lang/String;Ljava/lang/String;JJLkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Lio/github/santimattius/persistent/cache/CacheFileSystem;Ljava/lang/String;Ljava/lang/String;JJLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun clear (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun find (Lio/ktor/http/Url;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun findAll (Lio/ktor/http/Url;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun remove (Lio/ktor/http/Url;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
