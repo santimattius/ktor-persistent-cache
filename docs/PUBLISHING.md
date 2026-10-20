@@ -28,12 +28,11 @@ This document describes how to publish the **shared** module to Maven repositori
 
 ### 2.2 Customizing coordinates
 
-To change **groupId**, **artifactId**, or **version**:
+To change the version of every published artifact, update `artifactVersion` in the root
+`gradle.properties` file. All publishing modules read their version from that property.
 
-1. Open `shared/build.gradle.kts`.
-2. Edit the `mavenPublishing { coordinates(...) }` block.
-
-Alternatively, use the properties supported by the plugin in `gradle.properties` (see [plugin documentation — Maven Central](https://vanniktech.github.io/gradle-maven-publish-plugin/central/)).
+To change a module's **groupId** or **artifactId**, edit its
+`mavenPublishing { coordinates(...) }` block.
 
 ---
 

@@ -56,7 +56,11 @@ kotlin {
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.santimattius", "ktor-persistent-cache-okio", "1.2.0")
+    coordinates(
+        "io.github.santimattius",
+        "ktor-persistent-cache-okio",
+        providers.gradleProperty("artifactVersion").get(),
+    )
     pom {
         name.set("Ktor Persistent Cache - Okio")
         description.set("Okio-backed CacheFileSystem adapter for Ktor Persistent Cache.")

@@ -55,7 +55,11 @@ kotlin {
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.santimattius", "ktor-persistent-cache-kotlinx-io", "1.2.0")
+    coordinates(
+        "io.github.santimattius",
+        "ktor-persistent-cache-kotlinx-io",
+        providers.gradleProperty("artifactVersion").get(),
+    )
     pom {
         name.set("Ktor Persistent Cache - kotlinx-io")
         description.set("kotlinx-io-backed CacheFileSystem adapter for Ktor Persistent Cache (experimental).")
