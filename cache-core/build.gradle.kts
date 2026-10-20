@@ -76,7 +76,11 @@ apiValidation {
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.santimattius", "ktor-persistent-cache-core", "1.2.0")
+    coordinates(
+        "io.github.santimattius",
+        "ktor-persistent-cache-core",
+        providers.gradleProperty("artifactVersion").get(),
+    )
     pom {
         name.set("Ktor Persistent Cache - Core")
         description.set("Backend-independent algorithm and SPI for Ktor Persistent Cache. Zero Okio/kotlinx-io dependencies.")
