@@ -3,6 +3,7 @@ package io.github.santimattius.persistent.cache
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
+import okio.SYSTEM
 
 /**
  * [CacheFileSystem]<[Path]> adapter over a real Okio [FileSystem]. This is the first concrete
