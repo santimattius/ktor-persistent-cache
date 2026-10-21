@@ -82,7 +82,7 @@ works with no extra setup.
 ```kotlin
 dependencies {
     commonMain.dependencies {
-        implementation("io.github.santimattius:ktor-persistent-cache:1.2.0")
+        implementation("io.github.santimattius:ktor-persistent-cache:2.0.0-alpha01")
     }
     // Also add a Ktor engine for each target, e.g.:
     // implementation("io.ktor:ktor-client-okhttp")   // Android
@@ -97,10 +97,10 @@ possible dependency surface:
 ```kotlin
 dependencies {
     commonMain.dependencies {
-        implementation("io.github.santimattius:ktor-persistent-cache-core:1.2.0")
-        implementation("io.github.santimattius:ktor-persistent-cache-okio:1.2.0")
+        implementation("io.github.santimattius:ktor-persistent-cache-core:2.0.0-alpha01")
+        implementation("io.github.santimattius:ktor-persistent-cache-okio:2.0.0-alpha01")
         // or, instead of the line above:
-        // implementation("io.github.santimattius:ktor-persistent-cache-kotlinx-io:1.2.0")
+        // implementation("io.github.santimattius:ktor-persistent-cache-kotlinx-io:2.0.0-alpha01")
     }
 }
 ```
@@ -108,7 +108,7 @@ dependencies {
 ```toml
 # gradle/libs.versions.toml
 [versions]
-ktorPersistentCache = "1.2.0"
+ktorPersistentCache = "2.0.0-alpha01"
 
 [libraries]
 ktor-persistent-cache = { group = "io.github.santimattius", name = "ktor-persistent-cache", version.ref = "ktorPersistentCache" }
@@ -351,7 +351,7 @@ Note `cacheDirectory` here is a plain `String`, not an `okio.Path` — see
 ./gradlew publishToMavenLocal
 ```
 
-Then depend on `io.github.santimattius:ktor-persistent-cache:1.2.0` (or one of the other three
+Then depend on `io.github.santimattius:ktor-persistent-cache:2.0.0-alpha01` (or one of the other three
 artifacts) with `mavenLocal()` in your project.
 
 ---
@@ -391,7 +391,7 @@ the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0.tx
 
 | Resource                | URL                                                                                 |
 |--------------------------|-------------------------------------------------------------------------------------|
-| Migration guide (1.2.0)  | [docs/MIGRATION.md](docs/MIGRATION.md)                                              |
+| Migration guide (2.0.0-alpha01)  | [docs/MIGRATION.md](docs/MIGRATION.md)                                              |
 | Ktor — HTTP client       | [ktor.io/docs/client](https://ktor.io/docs/client.html)                             |
 | Ktor — Caching           | [ktor.io/docs/client-caching](https://ktor.io/docs/client-caching.html)             |
 | Okio                     | [github.com/square/okio](https://github.com/square/okio)                           |
