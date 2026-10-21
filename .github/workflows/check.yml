@@ -20,4 +20,4 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       - name: Check
-        run: ./gradlew check apiCheck
+        run: ./gradlew assemble check apiCheck
