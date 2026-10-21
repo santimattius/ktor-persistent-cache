@@ -1,4 +1,4 @@
-# Migration Guide — Multi-module rearchitecture (1.2.0)
+# Migration Guide — Multi-module rearchitecture (2.0.0-alpha01)
 
 This guide covers upgrading from the pre-1.2 single-module `:shared` API
 (`CacheConfig` / `CacheStorageConfig` / `installPersistentCache`) to the multi-module
@@ -146,7 +146,7 @@ Ships transitively via `:shared`, so if you already depend on
 ```kotlin
 dependencies {
     commonMain.dependencies {
-        implementation("io.github.santimattius:ktor-persistent-cache:1.2.0")
+        implementation("io.github.santimattius:ktor-persistent-cache:2.0.0-alpha01")
         // pulls in :cache-core and :cache-okio transitively
     }
 }
@@ -157,8 +157,8 @@ Or depend on `cache-core` + `cache-okio` directly, without the `:shared` facade:
 ```kotlin
 dependencies {
     commonMain.dependencies {
-        implementation("io.github.santimattius:ktor-persistent-cache-core:1.2.0")
-        implementation("io.github.santimattius:ktor-persistent-cache-okio:1.2.0")
+        implementation("io.github.santimattius:ktor-persistent-cache-core:2.0.0-alpha01")
+        implementation("io.github.santimattius:ktor-persistent-cache-okio:2.0.0-alpha01")
     }
 }
 ```
@@ -180,8 +180,8 @@ Not pulled in by `:shared`. Add it directly alongside `cache-core`:
 ```kotlin
 dependencies {
     commonMain.dependencies {
-        implementation("io.github.santimattius:ktor-persistent-cache-core:1.2.0")
-        implementation("io.github.santimattius:ktor-persistent-cache-kotlinx-io:1.2.0")
+        implementation("io.github.santimattius:ktor-persistent-cache-core:2.0.0-alpha01")
+        implementation("io.github.santimattius:ktor-persistent-cache-kotlinx-io:2.0.0-alpha01")
     }
 }
 ```
