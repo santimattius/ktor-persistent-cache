@@ -40,7 +40,8 @@ committed baseline (see below). Both must pass before a pull request is merged.
 | `cache-kotlinx-io` | Experimental kotlinx-io backend |
 | `cache-test-suite` | Shared conformance tests that every backend must pass |
 | `shared` | Compatibility facade over `cache-core` and `cache-okio` |
-| `androidApp`, `iosApp` | Sample applications (not published) |
+| `sample` | Unpublished deterministic backend checks consumed by the platform apps |
+| `androidApp`, `iosApp` | Native sample shells (not published); see [Running the backend sample apps](README.md#running-the-backend-sample-apps) |
 
 ## Updating the public API baselines
 
