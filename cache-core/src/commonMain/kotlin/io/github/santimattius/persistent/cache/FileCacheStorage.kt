@@ -9,11 +9,24 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.coroutines.cancellation.CancellationException
 
 /** Suffix of the temporary sibling file used by atomic writes. Never ends in `.cache`. */
 private const val TMP_SUFFIX = ".tmp"
+
+/** Number of hex characters of the vary-keys SHA-256 used in an entry file name. */
+private const val VARY_HASH_LENGTH = 16
+
+/** Well-formed entry file name: `<64 hex url hash>_<"0" | 16 hex vary hash>.cache`. */
+private val ENTRY_FILE_NAME = Regex("[0-9a-f]{64}_(0|[0-9a-f]{16})\\.cache")
+
+/**
+ * Fixed header of every entry file: the magic bytes `KPC` followed by the format version. A file
+ * without it, or with another version, is treated as corrupt and deleted.
+ */
+private val FORMAT_HEADER = byteArrayOf('K'.code.toByte(), 'P'.code.toByte(), 'C'.code.toByte(), 1)
 
 /**
  * A [CacheStorage] implementation that stores cached responses on the filesystem, generic over
@@ -49,6 +62,7 @@ public class FileCacheStorage<P>(
         // This is thread-safe as construction happens before the instance is shared.
         fileSystem.createDirectories(cacheDir)
         deleteStaleTempFiles()
+        deleteLegacyEntries()
     }
 
     /**
@@ -67,7 +81,7 @@ public class FileCacheStorage<P>(
                     response = data.makeCopy(),
                     timestamp = clock()
                 )
-                fileSystem.writeAtomically(cacheFile, cacheEntry.toByteArray())
+                fileSystem.writeAtomically(cacheFile, cacheEntry.toBytes())
                 cleanupCacheInternal()
             } catch (ex: CancellationException) {
                 throw ex
@@ -92,7 +106,10 @@ public class FileCacheStorage<P>(
                 val cacheFile = getCacheFile(url, varyKeys)
                 if (!fileSystem.exists(cacheFile)) return@withLock null
 
-                val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(cacheFile))
+                val cacheEntry = readEntry(cacheFile) ?: return@withLock null
+
+                // Defensive check: never serve an entry stored for a different vary set.
+                if (cacheEntry.response.varyKeys != varyKeys) return@withLock null
 
                 // Check if the cache entry is expired
                 if (isExpired(cacheEntry.timestamp)) {
@@ -129,7 +146,10 @@ public class FileCacheStorage<P>(
                 val results = mutableSetOf<CachedResponseData>()
                 for (file in matchingFiles) {
                     try {
-                        val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(file))
+                        val cacheEntry = readEntry(file) ?: continue
+
+                        // Defensive check: the file name must be the one derived from the stored vary keys.
+                        if (fileSystem.name(file) != cacheFileName(url, cacheEntry.response.varyKeys)) continue
 
                         // Check if the cache entry is expired
                         if (isExpired(cacheEntry.timestamp)) {
@@ -230,7 +250,8 @@ public class FileCacheStorage<P>(
      *
      * File naming scheme: {urlHash}_{varyKeysHash}.cache
      * - urlHash: SHA-256 hex digest of the URL string (always 64 chars)
-     * - varyKeysHash: Hash of sorted vary keys (or "0" if empty)
+     * - varyKeysHash: first 16 hex chars of the SHA-256 of the sorted `k=v;k=v` vary keys string
+     *   (or "0" if empty)
      *
      * This scheme allows prefix matching for findAll/removeAll operations.
      *
@@ -238,7 +259,10 @@ public class FileCacheStorage<P>(
      * @param varyKeys Optional vary keys for content negotiation differentiation
      * @return The cache file path
      */
-    private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): P {
+    private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): P =
+        fileSystem.resolve(directoryRoot, directoryName, cacheFileName(url, varyKeys))
+
+    private fun cacheFileName(url: Url, varyKeys: Map<String, String>): String {
         val urlKey = Sha256.hex(url.toString().encodeToByteArray())
         val varyKeysHash = if (varyKeys.isEmpty()) {
             "0"
@@ -246,9 +270,9 @@ public class FileCacheStorage<P>(
             val varyKeysString = varyKeys.entries
                 .sortedBy { it.key }
                 .joinToString(";") { "${it.key}=${it.value}" }
-            varyKeysString.hashCode().toUInt().toString(16)
+            Sha256.hex(varyKeysString.encodeToByteArray()).take(VARY_HASH_LENGTH)
         }
-        return fileSystem.resolve(directoryRoot, directoryName, "${urlKey}_${varyKeysHash}.cache")
+        return "${urlKey}_${varyKeysHash}.cache"
     }
 
     /**
@@ -271,6 +295,37 @@ public class FileCacheStorage<P>(
         } catch (_: Exception) {
             // Best-effort housekeeping; a failure must not prevent the cache from starting.
         }
+    }
+
+    /**
+     * Deletes `*.cache` files whose name is not `<64 hex>_<"0" | 16 hex>.cache`. These were written
+     * by versions that used a 32-bit vary suffix and can never be hit again; without this sweep they
+     * would stay forever when [maxSize] `<= 0`. Costs one directory listing and no reads. Best-effort.
+     */
+    private fun deleteLegacyEntries() {
+        try {
+            fileSystem.list(cacheDir)
+                .filter { path ->
+                    val name = fileSystem.name(path)
+                    name.endsWith(".cache") && !ENTRY_FILE_NAME.matches(name)
+                }
+                .forEach { fileSystem.delete(it) }
+        } catch (_: Exception) {
+            // Best-effort housekeeping; a failure must not prevent the cache from starting.
+        }
+    }
+
+    /**
+     * Reads and decodes [file]. A file with a missing or unknown header, or undecodable content, is
+     * corrupt: it is deleted and `null` is returned. I/O errors propagate to the caller.
+     */
+    private fun readEntry(file: P): CacheEntry? {
+        val bytes = fileSystem.read(file)
+        val entry = CacheEntry.fromBytes(bytes)
+        if (entry == null) {
+            fileSystem.delete(file)
+        }
+        return entry
     }
 
     private fun isExpired(timestamp: Long): Boolean {
@@ -298,7 +353,8 @@ public class FileCacheStorage<P>(
                     try {
                         val metadata = fileSystem.metadata(file)
                         val size = metadata?.size ?: return@mapNotNull null
-                        val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(file))
+                        val cacheEntry = CacheEntry.fromBytes(fileSystem.read(file))
+                            ?: throw IllegalStateException("Corrupt cache entry")
                         val lastModified = metadata.lastModifiedAtMillis ?: 0L
                         CacheFileInfo(file, size, cacheEntry.timestamp, lastModified)
                     } catch (_: Exception) {
@@ -346,25 +402,36 @@ private data class CacheEntry(
 ) {
     companion object {
         /**
-         * Deserializes a [CacheEntry] from ProtoBuf-encoded bytes.
+         * Decodes a [CacheEntry] from file bytes: a [FORMAT_HEADER] followed by the ProtoBuf payload.
          *
-         * @param bytes The serialized cache entry.
-         * @return The decoded [CacheEntry].
+         * @param bytes The file contents.
+         * @return The decoded [CacheEntry], or `null` if the header is missing or unknown, or the
+         *   payload cannot be decoded.
          */
         @OptIn(ExperimentalSerializationApi::class)
-        fun fromByteArray(bytes: ByteArray): CacheEntry {
-            return ProtoBuf.decodeFromByteArray(serializer(), bytes)
+        fun fromBytes(bytes: ByteArray): CacheEntry? {
+            if (bytes.size < FORMAT_HEADER.size) return null
+            for (i in FORMAT_HEADER.indices) {
+                if (bytes[i] != FORMAT_HEADER[i]) return null
+            }
+            return try {
+                ProtoBuf.decodeFromByteArray(serializer(), bytes.copyOfRange(FORMAT_HEADER.size, bytes.size))
+            } catch (_: SerializationException) {
+                null
+            } catch (_: IllegalArgumentException) {
+                null
+            }
         }
     }
 
     /**
-     * Serializes this [CacheEntry] to ProtoBuf-encoded bytes for storage.
+     * Serializes this [CacheEntry] to file bytes: the [FORMAT_HEADER] followed by the ProtoBuf payload.
      *
-     * @return The serialized byte array.
+     * @return The bytes to store.
      */
     @OptIn(ExperimentalSerializationApi::class)
-    fun toByteArray(): ByteArray {
-        return ProtoBuf.encodeToByteArray(serializer(), this)
+    fun toBytes(): ByteArray {
+        return FORMAT_HEADER + ProtoBuf.encodeToByteArray(serializer(), this)
     }
 }
 
