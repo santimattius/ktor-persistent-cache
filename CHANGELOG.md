@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cache entries are now written atomically (temporary file plus atomic move), so a crash can no longer leave a truncated entry. Stale `*.tmp` files are removed on startup and by `clear()`.
 - The vary-key part of the file name is now the first 16 hex chars of a SHA-256 instead of a 32-bit `String.hashCode`, and `find` rejects entries whose stored vary keys differ from the request.
 - Eviction no longer reads and decodes every entry after each `store`: it uses an in-memory index, and reads now refresh recency, so eviction is real least-recently-used.
+- `KotlinxIoCacheFileSystem.writeAtomically` no longer fails on platforms where `atomicMove` is unsupported (Android API 24-25, where it falls back to a non-atomic write) and retries after deleting the destination if the move is refused.
 
 ### Changed
 
