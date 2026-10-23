@@ -3,6 +3,7 @@ package io.github.santimattius.persistent.cache.conformance
 import io.github.santimattius.persistent.cache.InternalPersistentCacheApi
 import io.github.santimattius.persistent.cache.conformance.support.CacheConformanceSupport
 import io.github.santimattius.persistent.cache.conformance.support.CountingCacheFileSystem
+import io.github.santimattius.persistent.cache.conformance.support.ReversedListingCacheFileSystem
 import io.github.santimattius.persistent.cache.conformance.support.TestClock
 import io.github.santimattius.persistent.cache.conformance.support.TestDataFactory
 import io.ktor.http.Url
@@ -127,5 +128,38 @@ abstract class EvictionIndexConformanceTest<P> : CacheConformanceSupport<P>() {
 
             // Then
             assertEquals(setOf("c", "d"), survivors(storage, "c", "d"))
+        }
+
+    @Test
+    fun `given entries with equal timestamps when a new storage evicts then the result does not depend on scan order`() =
+        runTest {
+            // Given - identical entries written at one instant into two directories
+            val fixed = { 1_000L }
+            val names = listOf("a", "b", "c")
+            for (dir in listOf("forward", "reversed")) {
+                val writer = newStorage(directoryName = dir, maxSize = 0, clock = fixed)
+                names.forEach {
+                    writer.store(urlOf(it), TestDataFactory.createCachedResponse(urlOf(it).toString(), body = "body-$it"))
+                }
+            }
+            val size = fileSystem.read(cacheFiles("forward").first()).size.toLong()
+            val newcomer = urlOf("d")
+
+            // When - restarts that scan the directory in opposite orders each evict down to 2 entries
+            val forward = newStorage(directoryName = "forward", maxSize = size * 2 + size / 2, clock = fixed)
+            val reversed = newStorage(
+                directoryName = "reversed",
+                maxSize = size * 2 + size / 2,
+                clock = fixed,
+                backend = ReversedListingCacheFileSystem(fileSystem)
+            )
+            for (storage in listOf(forward, reversed)) {
+                storage.store(newcomer, TestDataFactory.createCachedResponse(newcomer.toString(), body = "body-d"))
+            }
+
+            // Then - ties break by file name, so both evict the same (smallest-named) entries
+            val survivingForward = cacheFiles("forward").map { fileSystem.name(it) }.toSet()
+            val survivingReversed = cacheFiles("reversed").map { fileSystem.name(it) }.toSet()
+            assertEquals(survivingForward, survivingReversed)
         }
 }

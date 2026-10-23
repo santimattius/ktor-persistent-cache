@@ -437,8 +437,14 @@ public class FileCacheStorage<P>(
                 }
             }
             // Oldest first, so the access counter ends up highest for the newest entries. The file
-            // lastModified breaks ties when the stored timestamp has coarse clock resolution.
-            .sortedWith(compareBy<ScannedEntry<P>> { it.timestamp }.thenBy { it.lastModifiedAtMillis })
+            // lastModified breaks ties when the stored timestamp has coarse clock resolution, and the
+            // file name makes the order deterministic when both are equal (kotlinx-io reports no
+            // lastModified), so it never depends on the backend's directory scan order.
+            .sortedWith(
+                compareBy<ScannedEntry<P>> { it.timestamp }
+                    .thenBy { it.lastModifiedAtMillis }
+                    .thenBy { fileSystem.name(it.path) }
+            )
 
         val entries = mutableMapOf<String, IndexedEntry<P>>()
         for (item in scanned) {

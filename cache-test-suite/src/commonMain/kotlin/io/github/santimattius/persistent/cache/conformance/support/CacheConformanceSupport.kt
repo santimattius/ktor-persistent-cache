@@ -111,3 +111,15 @@ class CountingCacheFileSystem<P>(
         return delegate.read(path)
     }
 }
+
+/**
+ * A [CacheFileSystem] wrapper whose [list] returns entries in reverse order, to prove that
+ * behaviour does not depend on the backend's directory scan order.
+ */
+@OptIn(InternalPersistentCacheApi::class)
+class ReversedListingCacheFileSystem<P>(
+    private val delegate: CacheFileSystem<P>
+) : CacheFileSystem<P> by delegate {
+
+    override fun list(dir: P): List<P> = delegate.list(dir).reversed()
+}
