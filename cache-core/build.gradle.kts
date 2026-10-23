@@ -19,6 +19,9 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
+        // Runs commonTest (incl. the cache-test-suite conformance suites) on the JVM against the
+        // Android source set and android.jar stubs. This is not a device/emulator run.
+        withHostTest { }
     }
 
     listOf(
