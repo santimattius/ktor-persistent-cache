@@ -5,6 +5,9 @@ import okio.Path
 import okio.Path.Companion.toPath
 import okio.SYSTEM
 
+/** Suffix of the temporary sibling file used by atomic writes. Never ends in `.cache`. */
+private const val TMP_SUFFIX = ".tmp"
+
 /**
  * [CacheFileSystem]<[Path]> adapter over a real Okio [FileSystem]. This is the first concrete
  * backend for `cache-core`'s [FileCacheStorage]: every I/O call `cache-core` needs is delegated
@@ -39,6 +42,21 @@ public class OkioCacheFileSystem(
     @OptIn(InternalPersistentCacheApi::class)
     override fun write(path: Path, bytes: ByteArray) {
         fileSystem.write(path) { write(bytes) }
+    }
+
+    @OptIn(InternalPersistentCacheApi::class)
+    override fun writeAtomically(path: Path, bytes: ByteArray) {
+        val tmp = path.parent?.resolve(path.name + TMP_SUFFIX) ?: (path.name + TMP_SUFFIX).toPath()
+        try {
+            fileSystem.write(tmp) { write(bytes) }
+            fileSystem.atomicMove(tmp, path)
+        } catch (e: Throwable) {
+            try {
+                fileSystem.delete(tmp, mustExist = false)
+            } catch (_: Exception) {
+            }
+            throw e
+        }
     }
 
     @OptIn(InternalPersistentCacheApi::class)

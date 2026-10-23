@@ -61,6 +61,17 @@ public interface CacheFileSystem<P> {
     public fun write(path: P, bytes: ByteArray)
 
     /**
+     * Writes [bytes] to [path] so that a reader (or a crash) never observes a partially written
+     * file: the bytes go to a temporary sibling named `<name>.tmp`, which is then atomically moved
+     * onto [path], replacing any existing file. On failure the previous content of [path] must be
+     * left untouched.
+     *
+     * There is deliberately no default body: a backend that cannot move atomically must say so
+     * explicitly instead of silently falling back to [write].
+     */
+    public fun writeAtomically(path: P, bytes: ByteArray)
+
+    /**
      * Lists the direct children of directory [dir]. Returns an empty list if [dir] does not
      * exist or has no children.
      */

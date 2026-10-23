@@ -6,6 +6,9 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readByteArray
 
+/** Suffix of the temporary sibling file used by atomic writes. Never ends in `.cache`. */
+private const val TMP_SUFFIX = ".tmp"
+
 /**
  * [CacheFileSystem]<[Path]> adapter over kotlinx-io's [SystemFileSystem]. This is the second
  * concrete backend for `cache-core`'s [FileCacheStorage],
@@ -43,6 +46,23 @@ public class KotlinxIoCacheFileSystem(
     @OptIn(InternalPersistentCacheApi::class)
     override fun write(path: Path, bytes: ByteArray) {
         fileSystem.sink(path).buffered().use { it.write(bytes) }
+    }
+
+    @OptIn(InternalPersistentCacheApi::class)
+    override fun writeAtomically(path: Path, bytes: ByteArray) {
+        val parent = path.parent
+        val tmpName = path.name + TMP_SUFFIX
+        val tmp = if (parent != null) Path(parent, tmpName) else Path(tmpName)
+        try {
+            write(tmp, bytes)
+            fileSystem.atomicMove(tmp, path)
+        } catch (e: Throwable) {
+            try {
+                fileSystem.delete(tmp, mustExist = false)
+            } catch (_: Exception) {
+            }
+            throw e
+        }
     }
 
     // Matches OkioCacheFileSystem.list()'s `listOrNull()` semantics: a missing directory yields

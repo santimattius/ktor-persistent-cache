@@ -12,6 +12,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.coroutines.cancellation.CancellationException
 
+/** Suffix of the temporary sibling file used by atomic writes. Never ends in `.cache`. */
+private const val TMP_SUFFIX = ".tmp"
+
 /**
  * A [CacheStorage] implementation that stores cached responses on the filesystem, generic over
  * the backend path type [P]. This is the algorithm previously in `OkioFileCacheStorage`
@@ -45,6 +48,7 @@ public class FileCacheStorage<P>(
         // Create cache directory once during initialization.
         // This is thread-safe as construction happens before the instance is shared.
         fileSystem.createDirectories(cacheDir)
+        deleteStaleTempFiles()
     }
 
     /**
@@ -63,7 +67,7 @@ public class FileCacheStorage<P>(
                     response = data.makeCopy(),
                     timestamp = clock()
                 )
-                fileSystem.write(cacheFile, cacheEntry.toByteArray())
+                fileSystem.writeAtomically(cacheFile, cacheEntry.toByteArray())
                 cleanupCacheInternal()
             } catch (ex: CancellationException) {
                 throw ex
@@ -206,7 +210,7 @@ public class FileCacheStorage<P>(
         cacheMutex.withLock {
             try {
                 val cacheFiles = fileSystem.list(cacheDir)
-                    .filter { fileSystem.name(it).endsWith(".cache") }
+                    .filter { fileSystem.name(it).endsWith(".cache") || fileSystem.name(it).endsWith(TMP_SUFFIX) }
 
                 for (file in cacheFiles) {
                     fileSystem.delete(file)
@@ -253,6 +257,20 @@ public class FileCacheStorage<P>(
      */
     private fun getUrlCacheKeyPrefix(url: Url): String {
         return Sha256.hex(url.toString().encodeToByteArray()) + "_"
+    }
+
+    /**
+     * Deletes leftover `*.tmp` files from writes interrupted by a crash. They never end in
+     * `.cache`, so lookups ignore them; this only reclaims their space. Best-effort.
+     */
+    private fun deleteStaleTempFiles() {
+        try {
+            fileSystem.list(cacheDir)
+                .filter { fileSystem.name(it).endsWith(TMP_SUFFIX) }
+                .forEach { fileSystem.delete(it) }
+        } catch (_: Exception) {
+            // Best-effort housekeeping; a failure must not prevent the cache from starting.
+        }
     }
 
     private fun isExpired(timestamp: Long): Boolean {

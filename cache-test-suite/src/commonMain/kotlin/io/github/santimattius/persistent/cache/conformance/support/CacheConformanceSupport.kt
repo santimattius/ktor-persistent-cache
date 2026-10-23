@@ -34,9 +34,10 @@ abstract class CacheConformanceSupport<P> {
         directoryName: String = "http_cache",
         maxSize: Long = 10L * 1024 * 1024,
         ttl: Long = 60 * 60 * 1000,
-        clock: () -> Long = { getTimeMillis() }
+        clock: () -> Long = { getTimeMillis() },
+        backend: CacheFileSystem<P> = fileSystem
     ): FileCacheStorage<P> = FileCacheStorage(
-        fileSystem = fileSystem,
+        fileSystem = backend,
         directoryRoot = root,
         directoryName = directoryName,
         maxSize = maxSize,
@@ -65,5 +66,28 @@ class TestClock(initialTime: Long = 0L) {
 
     fun advance(milliseconds: Long) {
         currentTime += milliseconds
+    }
+}
+
+/** Thrown by [CrashingCacheFileSystem] to simulate a process dying mid-write. */
+class SimulatedCrashException : RuntimeException("simulated crash")
+
+/**
+ * A [CacheFileSystem] wrapper that simulates a crash between "temporary file written" and
+ * "temporary file moved onto the target": when [crashTmpPath] is set, [writeAtomically] leaves a
+ * truncated file at that path and throws, never touching the real target.
+ */
+@OptIn(InternalPersistentCacheApi::class)
+class CrashingCacheFileSystem<P>(
+    private val delegate: CacheFileSystem<P>
+) : CacheFileSystem<P> by delegate {
+
+    /** Where the truncated temporary file is left behind. `null` disables the fault. */
+    var crashTmpPath: P? = null
+
+    override fun writeAtomically(path: P, bytes: ByteArray) {
+        val tmp = crashTmpPath ?: return delegate.writeAtomically(path, bytes)
+        delegate.write(tmp, bytes.copyOf(bytes.size / 2))
+        throw SimulatedCrashException()
     }
 }

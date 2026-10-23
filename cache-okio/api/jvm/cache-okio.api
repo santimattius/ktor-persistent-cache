@@ -20,5 +20,7 @@ public final class io/github/santimattius/persistent/cache/OkioCacheFileSystem :
 	public fun resolve (Ljava/lang/String;[Ljava/lang/String;)Lokio/Path;
 	public synthetic fun write (Ljava/lang/Object;[B)V
 	public fun write (Lokio/Path;[B)V
+	public synthetic fun writeAtomically (Ljava/lang/Object;[B)V
+	public fun writeAtomically (Lokio/Path;[B)V
 }
 

@@ -20,6 +20,7 @@ abstract interface <#A: kotlin/Any?> io.github.santimattius.persistent.cache/Cac
     abstract fun read(#A): kotlin/ByteArray // io.github.santimattius.persistent.cache/CacheFileSystem.read|read(1:0){}[0]
     abstract fun resolve(kotlin/String, kotlin/Array<out kotlin/String>...): #A // io.github.santimattius.persistent.cache/CacheFileSystem.resolve|resolve(kotlin.String;kotlin.Array<out|kotlin.String>...){}[0]
     abstract fun write(#A, kotlin/ByteArray) // io.github.santimattius.persistent.cache/CacheFileSystem.write|write(1:0;kotlin.ByteArray){}[0]
+    abstract fun writeAtomically(#A, kotlin/ByteArray) // io.github.santimattius.persistent.cache/CacheFileSystem.writeAtomically|writeAtomically(1:0;kotlin.ByteArray){}[0]
 }
 
 abstract interface io.github.santimattius.persistent.cache/CacheDirectoryProvider { // io.github.santimattius.persistent.cache/CacheDirectoryProvider|null[0]
