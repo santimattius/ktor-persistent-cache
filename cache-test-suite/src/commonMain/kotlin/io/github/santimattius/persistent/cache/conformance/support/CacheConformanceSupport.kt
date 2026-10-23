@@ -91,3 +91,23 @@ class CrashingCacheFileSystem<P>(
         throw SimulatedCrashException()
     }
 }
+
+/** A [CacheFileSystem] wrapper that counts [read] calls, to assert that an operation reads nothing. */
+@OptIn(InternalPersistentCacheApi::class)
+class CountingCacheFileSystem<P>(
+    private val delegate: CacheFileSystem<P>
+) : CacheFileSystem<P> by delegate {
+
+    /** Number of [read] calls since construction or the last [resetReads]. */
+    var reads: Int = 0
+        private set
+
+    fun resetReads() {
+        reads = 0
+    }
+
+    override fun read(path: P): ByteArray {
+        reads++
+        return delegate.read(path)
+    }
+}

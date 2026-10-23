@@ -57,6 +57,13 @@ public class FileCacheStorage<P>(
     private val cacheDir: P = fileSystem.resolve(directoryRoot, directoryName)
     private val cacheMutex = Mutex()
 
+    /**
+     * Metadata of every entry on disk, keyed by file name; `null` until the first cleanup builds it
+     * (see [cleanupCacheInternal]). Guarded by [cacheMutex].
+     */
+    private var index: MutableMap<String, IndexedEntry<P>>? = null
+    private var accessCounter = 0L
+
     init {
         // Create cache directory once during initialization.
         // This is thread-safe as construction happens before the instance is shared.
@@ -81,7 +88,9 @@ public class FileCacheStorage<P>(
                     response = data.makeCopy(),
                     timestamp = clock()
                 )
-                fileSystem.writeAtomically(cacheFile, cacheEntry.toBytes())
+                val bytes = cacheEntry.toBytes()
+                fileSystem.writeAtomically(cacheFile, bytes)
+                indexPut(cacheFile, bytes.size.toLong(), cacheEntry.timestamp)
                 cleanupCacheInternal()
             } catch (ex: CancellationException) {
                 throw ex
@@ -114,9 +123,11 @@ public class FileCacheStorage<P>(
                 // Check if the cache entry is expired
                 if (isExpired(cacheEntry.timestamp)) {
                     fileSystem.delete(cacheFile)
+                    indexRemove(cacheFile)
                     return@withLock null
                 }
 
+                indexTouch(cacheFile)
                 cacheEntry.response.restore()
             } catch (ex: CancellationException) {
                 throw ex
@@ -154,7 +165,9 @@ public class FileCacheStorage<P>(
                         // Check if the cache entry is expired
                         if (isExpired(cacheEntry.timestamp)) {
                             fileSystem.delete(file)
+                            indexRemove(file)
                         } else {
+                            indexTouch(file)
                             results.add(cacheEntry.response.restore())
                         }
                     } catch (ex: CancellationException) {
@@ -187,6 +200,7 @@ public class FileCacheStorage<P>(
                 if (fileSystem.exists(cacheFile)) {
                     fileSystem.delete(cacheFile)
                 }
+                indexRemove(cacheFile)
             } catch (ex: CancellationException) {
                 throw ex
             } catch (e: Exception) {
@@ -211,6 +225,7 @@ public class FileCacheStorage<P>(
 
                 for (file in matchingFiles) {
                     fileSystem.delete(file)
+                    indexRemove(file)
                 }
             } catch (ex: CancellationException) {
                 throw ex
@@ -234,6 +249,7 @@ public class FileCacheStorage<P>(
 
                 for (file in cacheFiles) {
                     fileSystem.delete(file)
+                    indexRemove(file)
                 }
             } catch (ex: CancellationException) {
                 throw ex
@@ -324,6 +340,7 @@ public class FileCacheStorage<P>(
         val entry = CacheEntry.fromBytes(bytes)
         if (entry == null) {
             fileSystem.delete(file)
+            indexRemove(file)
         }
         return entry
     }
@@ -337,57 +354,97 @@ public class FileCacheStorage<P>(
 
     /**
      * Internal cleanup method - MUST be called from within mutex lock.
-     * Removes expired entries and enforces size limits using LRU eviction.
+     * Removes expired entries and enforces [maxSize] with least-recently-used eviction.
      *
-     * Uses stored timestamp from CacheEntry for consistent TTL checking
-     * (same as find() and findAll() methods).
+     * Works on the in-memory [index], so after the first call it performs no disk reads. The index is
+     * built lazily here (one directory scan) and kept in sync by every other operation. If cleanup
+     * fails midway the index is dropped and rebuilt on the next call.
      */
     private fun cleanupCacheInternal() {
         if (maxSize <= 0) return
 
         try {
-            // Collect cache file info including stored timestamp from CacheEntry and file lastModified
-            val cacheFiles = fileSystem.list(cacheDir)
-                .filter { fileSystem.name(it).endsWith(".cache") }
-                .mapNotNull { file ->
-                    try {
-                        val metadata = fileSystem.metadata(file)
-                        val size = metadata?.size ?: return@mapNotNull null
-                        val cacheEntry = CacheEntry.fromBytes(fileSystem.read(file))
-                            ?: throw IllegalStateException("Corrupt cache entry")
-                        val lastModified = metadata.lastModifiedAtMillis ?: 0L
-                        CacheFileInfo(file, size, cacheEntry.timestamp, lastModified)
-                    } catch (_: Exception) {
-                        // Delete corrupted files
-                        try {
-                            fileSystem.delete(file)
-                        } catch (_: Exception) {
-                        }
-                        null
-                    }
-                }
-                // Newest first: by stored timestamp, then by file lastModified (tie-breaker for coarse clock resolution)
-                .sortedWith(compareByDescending<CacheFileInfo<P>> { it.timestamp }.thenByDescending { it.lastModifiedAtMillis })
+            val entries = index ?: buildIndex().also { index = it }
 
             var totalSize = 0L
 
-            for (fileInfo in cacheFiles) {
+            // Most recently used first; the access counter breaks ties between equal timestamps.
+            val byRecency = entries.values.sortedWith(
+                compareByDescending<IndexedEntry<P>> { it.lastAccess }.thenByDescending { it.sequence }
+            )
+            for (entry in byRecency) {
                 // First check: remove expired entries
-                if (isExpired(fileInfo.timestamp)) {
-                    fileSystem.delete(fileInfo.path)
+                if (isExpired(entry.timestamp)) {
+                    fileSystem.delete(entry.path)
+                    entries.remove(fileSystem.name(entry.path))
                     continue
                 }
 
                 // Second check: enforce size limit (LRU eviction)
-                if (totalSize + fileInfo.size <= maxSize) {
-                    totalSize += fileInfo.size
+                if (totalSize + entry.size <= maxSize) {
+                    totalSize += entry.size
                 } else {
-                    fileSystem.delete(fileInfo.path)
+                    fileSystem.delete(entry.path)
+                    entries.remove(fileSystem.name(entry.path))
                 }
             }
         } catch (_: Exception) {
             // Best-effort cleanup; failures are ignored to avoid breaking cache reads/writes.
+            index = null
         }
+    }
+
+    /**
+     * Scans the cache directory once to build the [index]. This is the only place that reads
+     * entries for eviction purposes. `lastAccess` starts at the stored timestamp, so after a restart
+     * eviction order falls back to write order. Corrupt files are deleted.
+     */
+    private fun buildIndex(): MutableMap<String, IndexedEntry<P>> {
+        val scanned = fileSystem.list(cacheDir)
+            .filter { fileSystem.name(it).endsWith(".cache") }
+            .mapNotNull { file ->
+                try {
+                    val metadata = fileSystem.metadata(file)
+                    val size = metadata?.size ?: return@mapNotNull null
+                    val cacheEntry = CacheEntry.fromBytes(fileSystem.read(file))
+                        ?: throw IllegalStateException("Corrupt cache entry")
+                    ScannedEntry(file, size, cacheEntry.timestamp, metadata.lastModifiedAtMillis ?: 0L)
+                } catch (_: Exception) {
+                    // Delete corrupted files
+                    try {
+                        fileSystem.delete(file)
+                    } catch (_: Exception) {
+                    }
+                    null
+                }
+            }
+            // Oldest first, so the access counter ends up highest for the newest entries. The file
+            // lastModified breaks ties when the stored timestamp has coarse clock resolution.
+            .sortedWith(compareBy<ScannedEntry<P>> { it.timestamp }.thenBy { it.lastModifiedAtMillis })
+
+        val entries = mutableMapOf<String, IndexedEntry<P>>()
+        for (item in scanned) {
+            entries[fileSystem.name(item.path)] =
+                IndexedEntry(item.path, item.size, item.timestamp, item.timestamp, ++accessCounter)
+        }
+        return entries
+    }
+
+    /** Records [file] as just written. No-op until the index is built (the build will scan it). */
+    private fun indexPut(file: P, size: Long, timestamp: Long) {
+        index?.put(fileSystem.name(file), IndexedEntry(file, size, timestamp, timestamp, ++accessCounter))
+    }
+
+    /** Marks [file] as just read, making it the most recently used entry. */
+    private fun indexTouch(file: P) {
+        val entries = index ?: return
+        val name = fileSystem.name(file)
+        val current = entries[name] ?: return
+        entries[name] = current.copy(lastAccess = clock(), sequence = ++accessCounter)
+    }
+
+    private fun indexRemove(file: P) {
+        index?.remove(fileSystem.name(file))
     }
 }
 
@@ -436,14 +493,24 @@ private data class CacheEntry(
 }
 
 /**
- * Metadata for a cache file used during cleanup (path, size, stored timestamp, file lastModified).
- * [lastModifiedAtMillis] is used as a tie-breaker when [timestamp] is equal (e.g. coarse clock resolution on some platforms).
+ * In-memory index record for one entry file: size in bytes, the timestamp stored in the entry (used
+ * for TTL), the last access time (used for LRU eviction) and a monotonic [sequence] that orders
+ * entries whose times are equal.
  */
-private data class CacheFileInfo<P>(
+private data class IndexedEntry<P>(
     val path: P,
     val size: Long,
-    val timestamp: Long, // Stored timestamp from CacheEntry for consistent TTL checking
-    val lastModifiedAtMillis: Long = 0L // File last-modified for LRU tie-breaker
+    val timestamp: Long,
+    val lastAccess: Long,
+    val sequence: Long
+)
+
+/** Result of scanning one file while building the index. */
+private data class ScannedEntry<P>(
+    val path: P,
+    val size: Long,
+    val timestamp: Long,
+    val lastModifiedAtMillis: Long
 )
 
 /**
