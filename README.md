@@ -356,6 +356,25 @@ artifacts) with `mavenLocal()` in your project.
 
 ---
 
+## Running the backend sample apps
+
+The repository includes native Android and iOS shells for the unpublished `:sample` module. Each
+shell has independent **Okio** and **kotlinx-io** actions that run an offline `MockEngine`
+persistence scenario.
+
+- **Android:** open `androidApp` in Android Studio, choose an emulator or device, and run the
+  `androidApp` configuration. The command-line equivalent is `./gradlew :androidApp:installDebug`
+  with a connected device.
+- **iOS:** open `iosApp/iosApp.xcodeproj` in Xcode, choose an iOS Simulator or device, and run the
+  `iosApp` scheme. The build phase compiles the `KtorPersistentCacheSample` framework from
+  `:sample` automatically.
+
+For either backend, **Pass** means the first client made one offline engine request, while a fresh
+second client made zero engine requests and returned the persisted response. This verifies real
+filesystem persistence without a network dependency.
+
+---
+
 ## Publishing
 
 Each publishable module (`shared`, `cache-core`, `cache-okio`, `cache-kotlinx-io`) is published with
