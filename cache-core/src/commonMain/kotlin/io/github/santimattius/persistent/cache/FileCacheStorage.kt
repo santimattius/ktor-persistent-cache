@@ -34,6 +34,24 @@ private val FORMAT_HEADER = byteArrayOf('K'.code.toByte(), 'P'.code.toByte(), 'C
  * (mutex, key hashing, ProtoBuf [CacheEntry], TTL, LRU cleanup) with every I/O call delegated to
  * [fileSystem], so it has no dependency on any concrete filesystem library.
  *
+ * ### Guarantees
+ * - **Atomic writes:** entries are written to a temporary file and moved onto the target, so a
+ *   crash never leaves a readable partial entry. Leftover `*.tmp` files are deleted on startup.
+ * - **Format:** each file is `<sha256(url)>_<vary hash>.cache`, starting with a magic and version
+ *   header. Files with a missing or unknown header, and files named by older versions, are deleted.
+ * - **Eviction:** when [maxSize] `> 0`, expired entries are removed and the least recently used
+ *   entries are evicted from an in-memory index, so cleanup performs no disk reads.
+ *
+ * ### Concurrency
+ * One instance per directory is supported; its calls are serialized by a mutex. Atomic writes keep
+ * concurrent readers from seeing torn files, but two instances writing or evicting in the same
+ * directory is unsupported (no cross-instance or cross-process lock; the worst case is a miss).
+ *
+ * ### Expiry
+ * [ttl] is a client-side retention bound measured from when an entry was stored. HTTP freshness is
+ * enforced separately by Ktor's `HttpCache` from `CachedResponseData.expires`, which is not
+ * consulted here. See `docs/STORAGE.md`.
+ *
  * @property fileSystem The backend SPI used for all filesystem operations.
  * @property directoryRoot The root cache directory (typically from a platform-specific
  *   `CacheDirectoryProvider`).
