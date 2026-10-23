@@ -1,5 +1,6 @@
 package io.github.santimattius.persistent.cache
 
+import kotlinx.io.IOException
 import kotlinx.io.buffered
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
@@ -48,20 +49,50 @@ public class KotlinxIoCacheFileSystem(
         fileSystem.sink(path).buffered().use { it.write(bytes) }
     }
 
+    /**
+     * Writes [bytes] to a `<name>.tmp` sibling and moves it onto [path].
+     *
+     * Verified against kotlinx-io 0.9.1 sources (`FileSystem.atomicMove` is documented as
+     * "overriding [destination] if it already exists"):
+     * - JVM and Android API 26+: `FileSystemJvm.kt` `NioMover` calls
+     *   `Files.move(src, dst, ATOMIC_MOVE, REPLACE_EXISTING)`, which replaces an existing target
+     *   atomically (POSIX `rename(2)`; `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING` on Windows).
+     * - iOS/macOS (`FileSystemApple.kt`) and Linux (`FileSystemUnix.kt`): `atomicMoveImpl` is
+     *   `rename(2)`, which atomically replaces an existing regular file.
+     * - Android API 24-25 (this library's minSdk is 24): `java.nio.file.Files` does not exist, so
+     *   the JVM `mover` throws [UnsupportedOperationException]. That case is handled below by a
+     *   non-atomic direct write.
+     * - Windows native: not verified; this project builds no such target.
+     *
+     * Defensive behaviour for backends that refuse to replace: if the move fails with an
+     * [IOException], the destination is deleted and the move is retried once. The temp file is
+     * always cleaned up.
+     */
     @OptIn(InternalPersistentCacheApi::class)
     override fun writeAtomically(path: Path, bytes: ByteArray) {
+        writeAtomically(path, bytes, fileSystem::atomicMove)
+    }
+
+    internal fun writeAtomically(path: Path, bytes: ByteArray, move: (Path, Path) -> Unit) {
         val parent = path.parent
         val tmpName = path.name + TMP_SUFFIX
         val tmp = if (parent != null) Path(parent, tmpName) else Path(tmpName)
         try {
             write(tmp, bytes)
-            fileSystem.atomicMove(tmp, path)
-        } catch (e: Throwable) {
+            try {
+                move(tmp, path)
+            } catch (_: UnsupportedOperationException) {
+                // No atomic move on this platform (Android API 24-25): degrade to a direct write.
+                write(path, bytes)
+            } catch (_: IOException) {
+                fileSystem.delete(path, mustExist = false)
+                move(tmp, path)
+            }
+        } finally {
             try {
                 fileSystem.delete(tmp, mustExist = false)
             } catch (_: Exception) {
             }
-            throw e
         }
     }
 

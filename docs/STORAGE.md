@@ -21,6 +21,23 @@ Each entry is one file under `<cache root>/<directory>/`:
   files never end in `.cache`, so lookups ignore them; leftovers from a crash are deleted when a
   storage starts and by `clear()`.
 
+### Replace semantics of the atomic move
+
+Verified against the kotlinx-io 0.9.1 and Okio 3.18.2 sources (the version pinned in
+`gradle/libs.versions.toml`): the move replaces an existing target on every target this
+project builds.
+
+| Target | kotlinx-io 0.9.1 | Okio 3.18.2 |
+| --- | --- | --- |
+| JVM, Android API 26+ (incl. Windows JVM) | `FileSystemJvm.kt` `NioMover`: `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)` | `NioSystemFileSystem.atomicMove`: same options |
+| Android API 24-25 (no `java.nio.file`) | throws `UnsupportedOperationException`; the adapter falls back to a non-atomic direct write | `JvmSystemFileSystem`: `File.renameTo`, replaces on POSIX |
+| iOS, macOS, Linux native | `atomicMoveImpl` = `rename(2)` | `PosixFileSystem.variantMove` = `rename(2)` |
+| Windows native | not verified (not built here) | not verified (not built here) |
+
+As a defence, `KotlinxIoCacheFileSystem.writeAtomically` deletes the destination and retries
+once if the move fails with an `IOException`. On Android API 24-25 the kotlinx-io backend is
+therefore not atomic; use the Okio backend there if torn writes matter.
+
 On startup the storage also deletes `*.cache` files whose name does not match the layout above
 (files written by versions that used a 32-bit vary suffix). Existing caches from earlier
 versions are therefore discarded once; this costs cache misses, never errors.
