@@ -38,6 +38,12 @@ As a defence, `KotlinxIoCacheFileSystem.writeAtomically` deletes the destination
 once if the move fails with an `IOException`. On Android API 24-25 the kotlinx-io backend is
 therefore not atomic; use the Okio backend there if torn writes matter.
 
+Android is covered by `testAndroidHostTest` (`:cache-core`, `:cache-okio`, `:cache-kotlinx-io`),
+which runs the common tests and conformance suites on the JVM against the Android source set and
+`android.jar` stubs. It does not run on a device or emulator, and on the host the API 24-25
+`atomicMove` path is only simulated by the fallback tests, never reached on a real API 24-25
+runtime.
+
 On startup the storage also deletes `*.cache` files whose name does not match the layout above
 (files written by versions that used a 32-bit vary suffix). Existing caches from earlier
 versions are therefore discarded once; this costs cache misses, never errors.

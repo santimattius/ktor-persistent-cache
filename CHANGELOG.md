@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Android host tests (`testAndroidHostTest`) now run the common tests and conformance suites for `:cache-core`, `:cache-okio` and `:cache-kotlinx-io` as part of `check`. They run on the JVM against Android stubs, not on a device or emulator.
 - Added an unpublished Kotlin Multiplatform `sample` module that verifies persistent cache reads with both Okio and kotlinx-io.
 - Added native Android Compose and iOS SwiftUI sample screens with visible pass/fail results.
 - Added deterministic, offline backend checks using Ktor `MockEngine` across Android, JVM, and iOS targets.
