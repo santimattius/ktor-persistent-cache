@@ -250,6 +250,42 @@ These rules are verified by `AuthPluginInteropTest` (in `cache-okio`'s test suit
 the real `install(PersistentCache)` DSL). No extra configuration is required beyond matching server
 cache headers and the `PersistentCacheConfig` flags above.
 
+### Using the storage directly with Ktor `HttpCache`
+
+If you already configure Ktor's own `HttpCache`, you can plug this library's storage into it
+without the `PersistentCache` plugin. Each backend module exposes one factory returning Ktor's
+`CacheStorage`:
+
+```kotlin
+import io.github.santimattius.persistent.cache.OkioCacheStorage
+import io.ktor.client.plugins.cache.HttpCache
+
+val client = HttpClient(CIO) {
+    install(HttpCache) {
+        publicStorage(OkioCacheStorage(maxSize = 20L * 1024 * 1024)) // or privateStorage(...)
+    }
+}
+```
+
+| Factory | Module | Stability |
+|---|---|---|
+| `OkioCacheStorage(...)` | `cache-okio` | Stable |
+| `KotlinxIoCacheStorage(...)` | `cache-kotlinx-io` | Experimental, needs `@OptIn(ExperimentalKotlinxIoCache::class)` (`WARNING` level) |
+
+Both take the same named parameters, with the same defaults as `PersistentCacheConfig`:
+`directory = "http_cache"`, `maxSize = 10 MiB`, `ttl = 1 hour`,
+`directoryProvider = getCacheDirectoryProvider()`, the backend file system
+(`okio.FileSystem.SYSTEM` / `SystemFileSystem`) and `clock`. They need no
+`@InternalPersistentCacheApi` opt-in, and they behave exactly like `install(PersistentCache)`
+(atomic writes, TTL, LRU eviction; see [docs/STORAGE.md](docs/STORAGE.md)).
+
+Prefer the factory when you want full control over `HttpCache` (several storages, custom
+`isShared`, your own plugin ordering) or want to avoid the plugin DSL. Prefer
+`install(PersistentCache)` for the shortest setup: it also wires `shared`/`public` and routes the
+storage to `publicStorage` or `privateStorage` for you. With the factory, Ktor's routing rules
+(`Cache-Control: private` goes to `privateStorage`) are yours to configure. Use one storage
+instance per cache directory.
+
 ---
 
 ## Architecture: `cache-core` and storage backends
