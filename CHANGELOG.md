@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Added public `OkioCacheStorage(...)` (`cache-okio`) and experimental `KotlinxIoCacheStorage(...)` (`cache-kotlinx-io`, `@ExperimentalKotlinxIoCache`) factories returning Ktor's `CacheStorage`, so the persistent storage can be used with `install(HttpCache) { publicStorage(...) }` without the `PersistentCache` plugin. `CacheFileSystem` and `FileCacheStorage` stay `@InternalPersistentCacheApi`.
+- `cache-okio` and `cache-kotlinx-io` now expose `ktor-client-core` as an `api` dependency, since the factories return Ktor's `CacheStorage`.
 - Android host tests (`testAndroidHostTest`) now run the common tests and conformance suites for `:cache-core`, `:cache-okio` and `:cache-kotlinx-io` as part of `check`. They run on the JVM against Android stubs, not on a device or emulator.
 - Added an unpublished Kotlin Multiplatform `sample` module that verifies persistent cache reads with both Okio and kotlinx-io.
 - Added native Android Compose and iOS SwiftUI sample screens with visible pass/fail results.

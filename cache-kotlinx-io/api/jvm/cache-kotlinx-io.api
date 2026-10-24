@@ -27,3 +27,8 @@ public final class io/github/santimattius/persistent/cache/KotlinxIoCacheFileSys
 	public fun writeAtomically (Lkotlinx/io/files/Path;[B)V
 }
 
+public final class io/github/santimattius/persistent/cache/KotlinxIoCacheStorageKt {
+	public static final fun KotlinxIoCacheStorage (Ljava/lang/String;JJLio/github/santimattius/persistent/cache/CacheDirectoryProvider;Lkotlinx/io/files/FileSystem;Lkotlin/jvm/functions/Function0;)Lio/ktor/client/plugins/cache/storage/CacheStorage;
+	public static synthetic fun KotlinxIoCacheStorage$default (Ljava/lang/String;JJLio/github/santimattius/persistent/cache/CacheDirectoryProvider;Lkotlinx/io/files/FileSystem;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Lio/ktor/client/plugins/cache/storage/CacheStorage;
+}
+

@@ -3,6 +3,26 @@
 How `FileCacheStorage` (the shared engine in `cache-core`, used by every backend) keeps entries
 on disk: what it guarantees, and what it does not.
 
+## Public entry points
+
+The storage engine (`FileCacheStorage`) and the backend SPI (`CacheFileSystem`,
+`CacheFileMetadata`) stay behind `@InternalPersistentCacheApi`. Applications reach it through:
+
+- `install(PersistentCache) { ... }` in `cache-core`, or
+- a per-backend factory returning Ktor's `CacheStorage`, for use with Ktor's own `HttpCache`:
+  `OkioCacheStorage(...)` (`cache-okio`, stable) and `KotlinxIoCacheStorage(...)`
+  (`cache-kotlinx-io`, `@ExperimentalKotlinxIoCache`).
+
+```kotlin
+install(HttpCache) {
+    publicStorage(OkioCacheStorage(directory = "http_cache", maxSize = 10L * 1024 * 1024, ttl = 3_600_000))
+}
+```
+
+The factories and `PersistentCacheConfig` share the same defaults (`"http_cache"`, 10 MiB,
+1 hour) and the same engine, so everything below applies to both. The factories have distinct
+names so both backend modules can be on the classpath.
+
 ## On-disk layout
 
 Each entry is one file under `<cache root>/<directory>/`:

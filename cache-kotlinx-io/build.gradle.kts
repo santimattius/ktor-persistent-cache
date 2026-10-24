@@ -42,11 +42,13 @@ kotlin {
             // must be `api`, not `implementation`, for consumers of :cache-kotlinx-io to resolve
             // it — same rationale as :cache-okio's `api(libs.okio)`.
             api(libs.kotlinx.io.core)
+            // The public CacheStorage factory returns Ktor's CacheStorage type.
+            api(libs.ktor.client.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
-            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.mock)
             implementation(projects.cacheTestSuite)
         }
     }
