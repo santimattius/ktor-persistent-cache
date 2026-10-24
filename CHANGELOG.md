@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [2.0.0-alpha02] - 2026-10-24
+
 ### Fixed
 
 - Cache entries are now written atomically (temporary file plus atomic move), so a crash can no longer leave a truncated entry. Stale `*.tmp` files are removed on startup and by `clear()`.
@@ -123,7 +125,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added JVM support and Maven Central publishing configuration.
 - Added `lastModifiedAtMillis` persistence metadata.
 
-[Unreleased]: https://github.com/santimattius/ktor-persistent-cache/compare/2.0.0-alpha01...HEAD
+[Unreleased]: https://github.com/santimattius/ktor-persistent-cache/compare/2.0.0-alpha02...HEAD
+[2.0.0-alpha02]: https://github.com/santimattius/ktor-persistent-cache/compare/2.0.0-alpha01...2.0.0-alpha02
 [2.0.0-alpha01]: https://github.com/santimattius/ktor-persistent-cache/compare/1.2.0...2.0.0-alpha01
 [1.2.0]: https://github.com/santimattius/ktor-persistent-cache/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/santimattius/ktor-persistent-cache/compare/1.0.1...1.1.0
