@@ -24,3 +24,8 @@ public final class io/github/santimattius/persistent/cache/OkioCacheFileSystem :
 	public fun writeAtomically (Lokio/Path;[B)V
 }
 
+public final class io/github/santimattius/persistent/cache/OkioCacheStorageKt {
+	public static final fun OkioCacheStorage (Ljava/lang/String;JJLio/github/santimattius/persistent/cache/CacheDirectoryProvider;Lokio/FileSystem;Lkotlin/jvm/functions/Function0;)Lio/ktor/client/plugins/cache/storage/CacheStorage;
+	public static synthetic fun OkioCacheStorage$default (Ljava/lang/String;JJLio/github/santimattius/persistent/cache/CacheDirectoryProvider;Lokio/FileSystem;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Lio/ktor/client/plugins/cache/storage/CacheStorage;
+}
+

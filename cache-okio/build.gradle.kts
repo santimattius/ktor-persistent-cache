@@ -41,6 +41,8 @@ kotlin {
             // OkioCacheFileSystem exposes okio.Path in its public API, so this must be `api`,
             // not `implementation`, for consumers of :cache-okio to resolve it.
             api(libs.okio)
+            // The public CacheStorage factory returns Ktor's CacheStorage type.
+            api(libs.ktor.client.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
