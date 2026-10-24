@@ -32,6 +32,13 @@ public abstract interface class io/github/santimattius/persistent/cache/CacheFil
 	public abstract fun writeAtomically (Ljava/lang/Object;[B)V
 }
 
+public final class io/github/santimattius/persistent/cache/CacheStorageDefaults {
+	public static final field DIRECTORY Ljava/lang/String;
+	public static final field INSTANCE Lio/github/santimattius/persistent/cache/CacheStorageDefaults;
+	public static final field MAX_SIZE J
+	public static final field TTL J
+}
+
 public final class io/github/santimattius/persistent/cache/CacheStorageException : java/lang/Exception {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V

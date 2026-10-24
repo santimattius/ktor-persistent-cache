@@ -88,6 +88,15 @@ final class io.github.santimattius.persistent.cache/PersistentCacheConfig { // i
         final fun <set-ttl>(kotlin/Long) // io.github.santimattius.persistent.cache/PersistentCacheConfig.ttl.<set-ttl>|<set-ttl>(kotlin.Long){}[0]
 }
 
+final object io.github.santimattius.persistent.cache/CacheStorageDefaults { // io.github.santimattius.persistent.cache/CacheStorageDefaults|null[0]
+    final const val DIRECTORY // io.github.santimattius.persistent.cache/CacheStorageDefaults.DIRECTORY|{}DIRECTORY[0]
+        final fun <get-DIRECTORY>(): kotlin/String // io.github.santimattius.persistent.cache/CacheStorageDefaults.DIRECTORY.<get-DIRECTORY>|<get-DIRECTORY>(){}[0]
+    final const val MAX_SIZE // io.github.santimattius.persistent.cache/CacheStorageDefaults.MAX_SIZE|{}MAX_SIZE[0]
+        final fun <get-MAX_SIZE>(): kotlin/Long // io.github.santimattius.persistent.cache/CacheStorageDefaults.MAX_SIZE.<get-MAX_SIZE>|<get-MAX_SIZE>(){}[0]
+    final const val TTL // io.github.santimattius.persistent.cache/CacheStorageDefaults.TTL|{}TTL[0]
+        final fun <get-TTL>(): kotlin/Long // io.github.santimattius.persistent.cache/CacheStorageDefaults.TTL.<get-TTL>|<get-TTL>(){}[0]
+}
+
 final val io.github.santimattius.persistent.cache/PersistentCache // io.github.santimattius.persistent.cache/PersistentCache|{}PersistentCache[0]
     final fun <get-PersistentCache>(): io.ktor.client.plugins.api/ClientPlugin<io.github.santimattius.persistent.cache/PersistentCacheConfig> // io.github.santimattius.persistent.cache/PersistentCache.<get-PersistentCache>|<get-PersistentCache>(){}[0]
 
