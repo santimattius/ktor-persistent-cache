@@ -23,5 +23,7 @@ public final class io/github/santimattius/persistent/cache/KotlinxIoCacheFileSys
 	public fun resolve (Ljava/lang/String;[Ljava/lang/String;)Lkotlinx/io/files/Path;
 	public synthetic fun write (Ljava/lang/Object;[B)V
 	public fun write (Lkotlinx/io/files/Path;[B)V
+	public synthetic fun writeAtomically (Ljava/lang/Object;[B)V
+	public fun writeAtomically (Lkotlinx/io/files/Path;[B)V
 }
 

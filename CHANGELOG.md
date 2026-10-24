@@ -6,8 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Cache entries are now written atomically (temporary file plus atomic move), so a crash can no longer leave a truncated entry. Stale `*.tmp` files are removed on startup and by `clear()`.
+- The vary-key part of the file name is now the first 16 hex chars of a SHA-256 instead of a 32-bit `String.hashCode`, and `find` rejects entries whose stored vary keys differ from the request.
+- Eviction no longer reads and decodes every entry after each `store`: it uses an in-memory index, and reads now refresh recency, so eviction is real least-recently-used.
+- `KotlinxIoCacheFileSystem.writeAtomically` no longer fails on platforms where `atomicMove` is unsupported (Android API 24-25, where it falls back to a non-atomic write) and retries after deleting the destination if the move is refused.
+
+### Changed
+
+- Entry files now start with a magic and format-version header; files with a missing or unknown header are deleted.
+- **Existing caches are discarded on first start.** Entry file names and format changed, and files written by earlier versions are removed at startup. The only consequence is cache misses while the cache refills.
+- Added `CacheFileSystem.writeAtomically` (no default body) to the `@InternalPersistentCacheApi` backend SPI; custom backends must implement it.
+- Documented storage concurrency (one instance per directory), eviction and expiry in `docs/STORAGE.md`. Ktor's `HttpCache` already enforces HTTP freshness from `CachedResponseData.expires`; the `ttl` option only bounds retention.
+
 ### Added
 
+- Android host tests (`testAndroidHostTest`) now run the common tests and conformance suites for `:cache-core`, `:cache-okio` and `:cache-kotlinx-io` as part of `check`. They run on the JVM against Android stubs, not on a device or emulator.
 - Added an unpublished Kotlin Multiplatform `sample` module that verifies persistent cache reads with both Okio and kotlinx-io.
 - Added native Android Compose and iOS SwiftUI sample screens with visible pass/fail results.
 - Added deterministic, offline backend checks using Ktor `MockEngine` across Android, JVM, and iOS targets.

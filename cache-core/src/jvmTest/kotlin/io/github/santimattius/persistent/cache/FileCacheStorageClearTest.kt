@@ -31,9 +31,9 @@ class FileCacheStorageClearTest {
         val writesAfterSetup = AtomicInteger(0)
         val delegate = InMemoryCacheFileSystem()
         val fileSystem = object : CacheFileSystem<String> by delegate {
-            override fun write(path: String, bytes: ByteArray) {
+            override fun writeAtomically(path: String, bytes: ByteArray) {
                 if (countWrites.get()) writesAfterSetup.incrementAndGet()
-                delegate.write(path, bytes)
+                delegate.writeAtomically(path, bytes)
             }
 
             override fun delete(path: String) {

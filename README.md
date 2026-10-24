@@ -38,6 +38,9 @@ and platform-appropriate cache directories.
   `Accept-Language`) are cached separately.
 - **LRU eviction** — When the cache exceeds the configured size, least-recently-used entries are
   removed.
+- **Crash-safe storage** — Entries are written atomically and carry a format version. See
+  [Storage behavior](docs/STORAGE.md) for the on-disk layout, eviction, concurrency guarantees and
+  how `ttl` relates to HTTP `expires`.
 - **Custom cache location** — Optional [`CacheDirectoryProvider`][CacheDirectoryProvider] for
   custom cache root paths (e.g. for tests or special directories).
 - **API stability gate** — Every publishable module is checked by

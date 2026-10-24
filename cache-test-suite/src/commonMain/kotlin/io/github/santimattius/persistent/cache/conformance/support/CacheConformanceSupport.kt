@@ -34,9 +34,10 @@ abstract class CacheConformanceSupport<P> {
         directoryName: String = "http_cache",
         maxSize: Long = 10L * 1024 * 1024,
         ttl: Long = 60 * 60 * 1000,
-        clock: () -> Long = { getTimeMillis() }
+        clock: () -> Long = { getTimeMillis() },
+        backend: CacheFileSystem<P> = fileSystem
     ): FileCacheStorage<P> = FileCacheStorage(
-        fileSystem = fileSystem,
+        fileSystem = backend,
         directoryRoot = root,
         directoryName = directoryName,
         maxSize = maxSize,
@@ -66,4 +67,59 @@ class TestClock(initialTime: Long = 0L) {
     fun advance(milliseconds: Long) {
         currentTime += milliseconds
     }
+}
+
+/** Thrown by [CrashingCacheFileSystem] to simulate a process dying mid-write. */
+class SimulatedCrashException : RuntimeException("simulated crash")
+
+/**
+ * A [CacheFileSystem] wrapper that simulates a crash between "temporary file written" and
+ * "temporary file moved onto the target": when [crashTmpPath] is set, [writeAtomically] leaves a
+ * truncated file at that path and throws, never touching the real target.
+ */
+@OptIn(InternalPersistentCacheApi::class)
+class CrashingCacheFileSystem<P>(
+    private val delegate: CacheFileSystem<P>
+) : CacheFileSystem<P> by delegate {
+
+    /** Where the truncated temporary file is left behind. `null` disables the fault. */
+    var crashTmpPath: P? = null
+
+    override fun writeAtomically(path: P, bytes: ByteArray) {
+        val tmp = crashTmpPath ?: return delegate.writeAtomically(path, bytes)
+        delegate.write(tmp, bytes.copyOf(bytes.size / 2))
+        throw SimulatedCrashException()
+    }
+}
+
+/** A [CacheFileSystem] wrapper that counts [read] calls, to assert that an operation reads nothing. */
+@OptIn(InternalPersistentCacheApi::class)
+class CountingCacheFileSystem<P>(
+    private val delegate: CacheFileSystem<P>
+) : CacheFileSystem<P> by delegate {
+
+    /** Number of [read] calls since construction or the last [resetReads]. */
+    var reads: Int = 0
+        private set
+
+    fun resetReads() {
+        reads = 0
+    }
+
+    override fun read(path: P): ByteArray {
+        reads++
+        return delegate.read(path)
+    }
+}
+
+/**
+ * A [CacheFileSystem] wrapper whose [list] returns entries in reverse order, to prove that
+ * behaviour does not depend on the backend's directory scan order.
+ */
+@OptIn(InternalPersistentCacheApi::class)
+class ReversedListingCacheFileSystem<P>(
+    private val delegate: CacheFileSystem<P>
+) : CacheFileSystem<P> by delegate {
+
+    override fun list(dir: P): List<P> = delegate.list(dir).reversed()
 }

@@ -72,6 +72,42 @@ class Sha256GoldenFilenameTest {
             )
         }
 
+    @Test
+    fun `given a known url and vary keys when stored via the okio backend then the vary suffix is the sha-256 prefix`() =
+        runTest {
+            val fileSystem = OkioCacheFileSystem(FakeFileSystem())
+            val storage = FileCacheStorage(
+                fileSystem = fileSystem,
+                directoryRoot = "/root",
+                directoryName = "http_cache",
+                maxSize = 10L * 1024 * 1024,
+                ttl = 60 * 60 * 1000
+            )
+            val url = Url("https://api.example.com/data")
+            val data = CachedResponseData(
+                url = url,
+                statusCode = HttpStatusCode.OK,
+                requestTime = GMTDate(),
+                responseTime = GMTDate(),
+                version = HttpProtocolVersion.HTTP_1_1,
+                expires = GMTDate(GMTDate().timestamp + 3_600_000),
+                headers = headersOf("Content-Type" to listOf("text/plain")),
+                varyKeys = mapOf("Accept-Language" to "en"),
+                body = "golden".encodeToByteArray()
+            )
+
+            storage.store(url, data)
+
+            val filenames = fileSystem.list(fileSystem.resolve("/root", "http_cache")).map { fileSystem.name(it) }
+
+            // Vary suffix: first 16 hex chars of sha256("Accept-Language=en"), computed independently via
+            // python3 hashlib. The URL part is unchanged from the pre-split scheme.
+            assertEquals(
+                setOf("${GOLDEN_SHA256_HEX_FOR_KNOWN_URL}_107b310d9d5bd7f5.cache"),
+                filenames.toSet()
+            )
+        }
+
     private companion object {
         // Computed independently via: python3 -c "import hashlib;
         // print(hashlib.sha256(b'https://api.example.com/data').hexdigest())"

@@ -16,10 +16,17 @@ public class PersistentCacheConfig {
     /** Subdirectory name under the cache root. Default: `"http_cache"`. */
     public var directory: String = "http_cache"
 
-    /** Maximum on-disk size in bytes. A value `<= 0` means unlimited. Default: 10 MB. */
+    /**
+     * Maximum on-disk size in bytes. A value `<= 0` means unlimited. Default: 10 MB. When exceeded,
+     * the least recently used entries (reads count as use) are evicted.
+     */
     public var maxSize: Long = 10L * 1024 * 1024
 
-    /** Entry time-to-live in milliseconds. A value `<= 0` means entries never expire. Default: 1 hour. */
+    /**
+     * Entry time-to-live in milliseconds, measured from when the entry was stored. A value `<= 0`
+     * means entries never expire. Default: 1 hour. This bounds retention only: HTTP freshness
+     * (`max-age`, `Expires`) is enforced by Ktor's `HttpCache` from the stored `expires`.
+     */
     public var ttl: Long = 60 * 60 * 1000
 
     /** Whether the client where this is installed is shared among multiple users. Default: `true`. */

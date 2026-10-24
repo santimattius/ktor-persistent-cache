@@ -9,14 +9,48 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.coroutines.cancellation.CancellationException
+
+/** Suffix of the temporary sibling file used by atomic writes. Never ends in `.cache`. */
+private const val TMP_SUFFIX = ".tmp"
+
+/** Number of hex characters of the vary-keys SHA-256 used in an entry file name. */
+private const val VARY_HASH_LENGTH = 16
+
+/** Well-formed entry file name: `<64 hex url hash>_<"0" | 16 hex vary hash>.cache`. */
+private val ENTRY_FILE_NAME = Regex("[0-9a-f]{64}_(0|[0-9a-f]{16})\\.cache")
+
+/**
+ * Fixed header of every entry file: the magic bytes `KPC` followed by the format version. A file
+ * without it, or with another version, is treated as corrupt and deleted.
+ */
+private val FORMAT_HEADER = byteArrayOf('K'.code.toByte(), 'P'.code.toByte(), 'C'.code.toByte(), 1)
 
 /**
  * A [CacheStorage] implementation that stores cached responses on the filesystem, generic over
  * the backend path type [P]. This is the algorithm previously in `OkioFileCacheStorage`
  * (mutex, key hashing, ProtoBuf [CacheEntry], TTL, LRU cleanup) with every I/O call delegated to
  * [fileSystem], so it has no dependency on any concrete filesystem library.
+ *
+ * ### Guarantees
+ * - **Atomic writes:** entries are written to a temporary file and moved onto the target, so a
+ *   crash never leaves a readable partial entry. Leftover `*.tmp` files are deleted on startup.
+ * - **Format:** each file is `<sha256(url)>_<vary hash>.cache`, starting with a magic and version
+ *   header. Files with a missing or unknown header, and files named by older versions, are deleted.
+ * - **Eviction:** when [maxSize] `> 0`, expired entries are removed and the least recently used
+ *   entries are evicted from an in-memory index, so cleanup performs no disk reads.
+ *
+ * ### Concurrency
+ * One instance per directory is supported; its calls are serialized by a mutex. Atomic writes keep
+ * concurrent readers from seeing torn files, but two instances writing or evicting in the same
+ * directory is unsupported (no cross-instance or cross-process lock; the worst case is a miss).
+ *
+ * ### Expiry
+ * [ttl] is a client-side retention bound measured from when an entry was stored. HTTP freshness is
+ * enforced separately by Ktor's `HttpCache` from `CachedResponseData.expires`, which is not
+ * consulted here. See `docs/STORAGE.md`.
  *
  * @property fileSystem The backend SPI used for all filesystem operations.
  * @property directoryRoot The root cache directory (typically from a platform-specific
@@ -41,10 +75,19 @@ public class FileCacheStorage<P>(
     private val cacheDir: P = fileSystem.resolve(directoryRoot, directoryName)
     private val cacheMutex = Mutex()
 
+    /**
+     * Metadata of every entry on disk, keyed by file name; `null` until the first cleanup builds it
+     * (see [cleanupCacheInternal]). Guarded by [cacheMutex].
+     */
+    private var index: MutableMap<String, IndexedEntry<P>>? = null
+    private var accessCounter = 0L
+
     init {
         // Create cache directory once during initialization.
         // This is thread-safe as construction happens before the instance is shared.
         fileSystem.createDirectories(cacheDir)
+        deleteStaleTempFiles()
+        deleteLegacyEntries()
     }
 
     /**
@@ -63,7 +106,9 @@ public class FileCacheStorage<P>(
                     response = data.makeCopy(),
                     timestamp = clock()
                 )
-                fileSystem.write(cacheFile, cacheEntry.toByteArray())
+                val bytes = cacheEntry.toBytes()
+                fileSystem.writeAtomically(cacheFile, bytes)
+                indexPut(cacheFile, bytes.size.toLong(), cacheEntry.timestamp)
                 cleanupCacheInternal()
             } catch (ex: CancellationException) {
                 throw ex
@@ -88,14 +133,19 @@ public class FileCacheStorage<P>(
                 val cacheFile = getCacheFile(url, varyKeys)
                 if (!fileSystem.exists(cacheFile)) return@withLock null
 
-                val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(cacheFile))
+                val cacheEntry = readEntry(cacheFile) ?: return@withLock null
+
+                // Defensive check: never serve an entry stored for a different vary set.
+                if (cacheEntry.response.varyKeys != varyKeys) return@withLock null
 
                 // Check if the cache entry is expired
                 if (isExpired(cacheEntry.timestamp)) {
                     fileSystem.delete(cacheFile)
+                    indexRemove(cacheFile)
                     return@withLock null
                 }
 
+                indexTouch(cacheFile)
                 cacheEntry.response.restore()
             } catch (ex: CancellationException) {
                 throw ex
@@ -125,12 +175,17 @@ public class FileCacheStorage<P>(
                 val results = mutableSetOf<CachedResponseData>()
                 for (file in matchingFiles) {
                     try {
-                        val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(file))
+                        val cacheEntry = readEntry(file) ?: continue
+
+                        // Defensive check: the file name must be the one derived from the stored vary keys.
+                        if (fileSystem.name(file) != cacheFileName(url, cacheEntry.response.varyKeys)) continue
 
                         // Check if the cache entry is expired
                         if (isExpired(cacheEntry.timestamp)) {
                             fileSystem.delete(file)
+                            indexRemove(file)
                         } else {
+                            indexTouch(file)
                             results.add(cacheEntry.response.restore())
                         }
                     } catch (ex: CancellationException) {
@@ -163,6 +218,7 @@ public class FileCacheStorage<P>(
                 if (fileSystem.exists(cacheFile)) {
                     fileSystem.delete(cacheFile)
                 }
+                indexRemove(cacheFile)
             } catch (ex: CancellationException) {
                 throw ex
             } catch (e: Exception) {
@@ -187,6 +243,7 @@ public class FileCacheStorage<P>(
 
                 for (file in matchingFiles) {
                     fileSystem.delete(file)
+                    indexRemove(file)
                 }
             } catch (ex: CancellationException) {
                 throw ex
@@ -206,10 +263,11 @@ public class FileCacheStorage<P>(
         cacheMutex.withLock {
             try {
                 val cacheFiles = fileSystem.list(cacheDir)
-                    .filter { fileSystem.name(it).endsWith(".cache") }
+                    .filter { fileSystem.name(it).endsWith(".cache") || fileSystem.name(it).endsWith(TMP_SUFFIX) }
 
                 for (file in cacheFiles) {
                     fileSystem.delete(file)
+                    indexRemove(file)
                 }
             } catch (ex: CancellationException) {
                 throw ex
@@ -226,7 +284,8 @@ public class FileCacheStorage<P>(
      *
      * File naming scheme: {urlHash}_{varyKeysHash}.cache
      * - urlHash: SHA-256 hex digest of the URL string (always 64 chars)
-     * - varyKeysHash: Hash of sorted vary keys (or "0" if empty)
+     * - varyKeysHash: first 16 hex chars of the SHA-256 of the sorted `k=v;k=v` vary keys string
+     *   (or "0" if empty)
      *
      * This scheme allows prefix matching for findAll/removeAll operations.
      *
@@ -234,7 +293,10 @@ public class FileCacheStorage<P>(
      * @param varyKeys Optional vary keys for content negotiation differentiation
      * @return The cache file path
      */
-    private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): P {
+    private fun getCacheFile(url: Url, varyKeys: Map<String, String> = emptyMap()): P =
+        fileSystem.resolve(directoryRoot, directoryName, cacheFileName(url, varyKeys))
+
+    private fun cacheFileName(url: Url, varyKeys: Map<String, String>): String {
         val urlKey = Sha256.hex(url.toString().encodeToByteArray())
         val varyKeysHash = if (varyKeys.isEmpty()) {
             "0"
@@ -242,9 +304,9 @@ public class FileCacheStorage<P>(
             val varyKeysString = varyKeys.entries
                 .sortedBy { it.key }
                 .joinToString(";") { "${it.key}=${it.value}" }
-            varyKeysString.hashCode().toUInt().toString(16)
+            Sha256.hex(varyKeysString.encodeToByteArray()).take(VARY_HASH_LENGTH)
         }
-        return fileSystem.resolve(directoryRoot, directoryName, "${urlKey}_${varyKeysHash}.cache")
+        return "${urlKey}_${varyKeysHash}.cache"
     }
 
     /**
@@ -253,6 +315,52 @@ public class FileCacheStorage<P>(
      */
     private fun getUrlCacheKeyPrefix(url: Url): String {
         return Sha256.hex(url.toString().encodeToByteArray()) + "_"
+    }
+
+    /**
+     * Deletes leftover `*.tmp` files from writes interrupted by a crash. They never end in
+     * `.cache`, so lookups ignore them; this only reclaims their space. Best-effort.
+     */
+    private fun deleteStaleTempFiles() {
+        try {
+            fileSystem.list(cacheDir)
+                .filter { fileSystem.name(it).endsWith(TMP_SUFFIX) }
+                .forEach { fileSystem.delete(it) }
+        } catch (_: Exception) {
+            // Best-effort housekeeping; a failure must not prevent the cache from starting.
+        }
+    }
+
+    /**
+     * Deletes `*.cache` files whose name is not `<64 hex>_<"0" | 16 hex>.cache`. These were written
+     * by versions that used a 32-bit vary suffix and can never be hit again; without this sweep they
+     * would stay forever when [maxSize] `<= 0`. Costs one directory listing and no reads. Best-effort.
+     */
+    private fun deleteLegacyEntries() {
+        try {
+            fileSystem.list(cacheDir)
+                .filter { path ->
+                    val name = fileSystem.name(path)
+                    name.endsWith(".cache") && !ENTRY_FILE_NAME.matches(name)
+                }
+                .forEach { fileSystem.delete(it) }
+        } catch (_: Exception) {
+            // Best-effort housekeeping; a failure must not prevent the cache from starting.
+        }
+    }
+
+    /**
+     * Reads and decodes [file]. A file with a missing or unknown header, or undecodable content, is
+     * corrupt: it is deleted and `null` is returned. I/O errors propagate to the caller.
+     */
+    private fun readEntry(file: P): CacheEntry? {
+        val bytes = fileSystem.read(file)
+        val entry = CacheEntry.fromBytes(bytes)
+        if (entry == null) {
+            fileSystem.delete(file)
+            indexRemove(file)
+        }
+        return entry
     }
 
     private fun isExpired(timestamp: Long): Boolean {
@@ -264,56 +372,103 @@ public class FileCacheStorage<P>(
 
     /**
      * Internal cleanup method - MUST be called from within mutex lock.
-     * Removes expired entries and enforces size limits using LRU eviction.
+     * Removes expired entries and enforces [maxSize] with least-recently-used eviction.
      *
-     * Uses stored timestamp from CacheEntry for consistent TTL checking
-     * (same as find() and findAll() methods).
+     * Works on the in-memory [index], so after the first call it performs no disk reads. The index is
+     * built lazily here (one directory scan) and kept in sync by every other operation. If cleanup
+     * fails midway the index is dropped and rebuilt on the next call.
      */
     private fun cleanupCacheInternal() {
         if (maxSize <= 0) return
 
         try {
-            // Collect cache file info including stored timestamp from CacheEntry and file lastModified
-            val cacheFiles = fileSystem.list(cacheDir)
-                .filter { fileSystem.name(it).endsWith(".cache") }
-                .mapNotNull { file ->
-                    try {
-                        val metadata = fileSystem.metadata(file)
-                        val size = metadata?.size ?: return@mapNotNull null
-                        val cacheEntry = CacheEntry.fromByteArray(fileSystem.read(file))
-                        val lastModified = metadata.lastModifiedAtMillis ?: 0L
-                        CacheFileInfo(file, size, cacheEntry.timestamp, lastModified)
-                    } catch (_: Exception) {
-                        // Delete corrupted files
-                        try {
-                            fileSystem.delete(file)
-                        } catch (_: Exception) {
-                        }
-                        null
-                    }
-                }
-                // Newest first: by stored timestamp, then by file lastModified (tie-breaker for coarse clock resolution)
-                .sortedWith(compareByDescending<CacheFileInfo<P>> { it.timestamp }.thenByDescending { it.lastModifiedAtMillis })
+            val entries = index ?: buildIndex().also { index = it }
 
             var totalSize = 0L
 
-            for (fileInfo in cacheFiles) {
+            // Most recently used first; the access counter breaks ties between equal timestamps.
+            val byRecency = entries.values.sortedWith(
+                compareByDescending<IndexedEntry<P>> { it.lastAccess }.thenByDescending { it.sequence }
+            )
+            for (entry in byRecency) {
                 // First check: remove expired entries
-                if (isExpired(fileInfo.timestamp)) {
-                    fileSystem.delete(fileInfo.path)
+                if (isExpired(entry.timestamp)) {
+                    fileSystem.delete(entry.path)
+                    entries.remove(fileSystem.name(entry.path))
                     continue
                 }
 
                 // Second check: enforce size limit (LRU eviction)
-                if (totalSize + fileInfo.size <= maxSize) {
-                    totalSize += fileInfo.size
+                if (totalSize + entry.size <= maxSize) {
+                    totalSize += entry.size
                 } else {
-                    fileSystem.delete(fileInfo.path)
+                    fileSystem.delete(entry.path)
+                    entries.remove(fileSystem.name(entry.path))
                 }
             }
         } catch (_: Exception) {
             // Best-effort cleanup; failures are ignored to avoid breaking cache reads/writes.
+            index = null
         }
+    }
+
+    /**
+     * Scans the cache directory once to build the [index]. This is the only place that reads
+     * entries for eviction purposes. `lastAccess` starts at the stored timestamp, so after a restart
+     * eviction order falls back to write order. Corrupt files are deleted.
+     */
+    private fun buildIndex(): MutableMap<String, IndexedEntry<P>> {
+        val scanned = fileSystem.list(cacheDir)
+            .filter { fileSystem.name(it).endsWith(".cache") }
+            .mapNotNull { file ->
+                try {
+                    val metadata = fileSystem.metadata(file)
+                    val size = metadata?.size ?: return@mapNotNull null
+                    val cacheEntry = CacheEntry.fromBytes(fileSystem.read(file))
+                        ?: throw IllegalStateException("Corrupt cache entry")
+                    ScannedEntry(file, size, cacheEntry.timestamp, metadata.lastModifiedAtMillis ?: 0L)
+                } catch (_: Exception) {
+                    // Delete corrupted files
+                    try {
+                        fileSystem.delete(file)
+                    } catch (_: Exception) {
+                    }
+                    null
+                }
+            }
+            // Oldest first, so the access counter ends up highest for the newest entries. The file
+            // lastModified breaks ties when the stored timestamp has coarse clock resolution, and the
+            // file name makes the order deterministic when both are equal (kotlinx-io reports no
+            // lastModified), so it never depends on the backend's directory scan order.
+            .sortedWith(
+                compareBy<ScannedEntry<P>> { it.timestamp }
+                    .thenBy { it.lastModifiedAtMillis }
+                    .thenBy { fileSystem.name(it.path) }
+            )
+
+        val entries = mutableMapOf<String, IndexedEntry<P>>()
+        for (item in scanned) {
+            entries[fileSystem.name(item.path)] =
+                IndexedEntry(item.path, item.size, item.timestamp, item.timestamp, ++accessCounter)
+        }
+        return entries
+    }
+
+    /** Records [file] as just written. No-op until the index is built (the build will scan it). */
+    private fun indexPut(file: P, size: Long, timestamp: Long) {
+        index?.put(fileSystem.name(file), IndexedEntry(file, size, timestamp, timestamp, ++accessCounter))
+    }
+
+    /** Marks [file] as just read, making it the most recently used entry. */
+    private fun indexTouch(file: P) {
+        val entries = index ?: return
+        val name = fileSystem.name(file)
+        val current = entries[name] ?: return
+        entries[name] = current.copy(lastAccess = clock(), sequence = ++accessCounter)
+    }
+
+    private fun indexRemove(file: P) {
+        index?.remove(fileSystem.name(file))
     }
 }
 
@@ -328,37 +483,58 @@ private data class CacheEntry(
 ) {
     companion object {
         /**
-         * Deserializes a [CacheEntry] from ProtoBuf-encoded bytes.
+         * Decodes a [CacheEntry] from file bytes: a [FORMAT_HEADER] followed by the ProtoBuf payload.
          *
-         * @param bytes The serialized cache entry.
-         * @return The decoded [CacheEntry].
+         * @param bytes The file contents.
+         * @return The decoded [CacheEntry], or `null` if the header is missing or unknown, or the
+         *   payload cannot be decoded.
          */
         @OptIn(ExperimentalSerializationApi::class)
-        fun fromByteArray(bytes: ByteArray): CacheEntry {
-            return ProtoBuf.decodeFromByteArray(serializer(), bytes)
+        fun fromBytes(bytes: ByteArray): CacheEntry? {
+            if (bytes.size < FORMAT_HEADER.size) return null
+            for (i in FORMAT_HEADER.indices) {
+                if (bytes[i] != FORMAT_HEADER[i]) return null
+            }
+            return try {
+                ProtoBuf.decodeFromByteArray(serializer(), bytes.copyOfRange(FORMAT_HEADER.size, bytes.size))
+            } catch (_: SerializationException) {
+                null
+            } catch (_: IllegalArgumentException) {
+                null
+            }
         }
     }
 
     /**
-     * Serializes this [CacheEntry] to ProtoBuf-encoded bytes for storage.
+     * Serializes this [CacheEntry] to file bytes: the [FORMAT_HEADER] followed by the ProtoBuf payload.
      *
-     * @return The serialized byte array.
+     * @return The bytes to store.
      */
     @OptIn(ExperimentalSerializationApi::class)
-    fun toByteArray(): ByteArray {
-        return ProtoBuf.encodeToByteArray(serializer(), this)
+    fun toBytes(): ByteArray {
+        return FORMAT_HEADER + ProtoBuf.encodeToByteArray(serializer(), this)
     }
 }
 
 /**
- * Metadata for a cache file used during cleanup (path, size, stored timestamp, file lastModified).
- * [lastModifiedAtMillis] is used as a tie-breaker when [timestamp] is equal (e.g. coarse clock resolution on some platforms).
+ * In-memory index record for one entry file: size in bytes, the timestamp stored in the entry (used
+ * for TTL), the last access time (used for LRU eviction) and a monotonic [sequence] that orders
+ * entries whose times are equal.
  */
-private data class CacheFileInfo<P>(
+private data class IndexedEntry<P>(
     val path: P,
     val size: Long,
-    val timestamp: Long, // Stored timestamp from CacheEntry for consistent TTL checking
-    val lastModifiedAtMillis: Long = 0L // File last-modified for LRU tie-breaker
+    val timestamp: Long,
+    val lastAccess: Long,
+    val sequence: Long
+)
+
+/** Result of scanning one file while building the index. */
+private data class ScannedEntry<P>(
+    val path: P,
+    val size: Long,
+    val timestamp: Long,
+    val lastModifiedAtMillis: Long
 )
 
 /**

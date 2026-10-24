@@ -49,6 +49,13 @@ class InMemoryCacheFileSystem : CacheFileSystem<String> {
         lastModifiedAtMillis[path] = getTimeMillis()
     }
 
+    override fun writeAtomically(path: String, bytes: ByteArray) {
+        val tmp = "$path.tmp"
+        write(tmp, bytes)
+        files[path] = files.remove(tmp)!!
+        lastModifiedAtMillis[path] = lastModifiedAtMillis.remove(tmp) ?: getTimeMillis()
+    }
+
     override fun list(dir: String): List<String> {
         val prefix = "$dir/"
         return (files.keys + directories)

@@ -31,6 +31,12 @@ Build and verify everything the CI verifies:
 `check` runs the tests of all modules; `apiCheck` compares each module's public API against the
 committed baseline (see below). Both must pass before a pull request is merged.
 
+`check` runs the common tests, including the `cache-test-suite` conformance suites, on the JVM,
+on iOS (simulator) and on Android. The Android run is `testAndroidHostTest` in `:cache-core`,
+`:cache-okio` and `:cache-kotlinx-io`: a JVM host test against the Android source set and
+`android.jar` stubs. It needs no device or emulator, so it does not exercise a real Android
+runtime.
+
 ### Project layout
 
 | Module | Purpose |
